@@ -27,7 +27,7 @@ class SignalEvent(Event):
     This is received by a Portfolio object and acted upon.
     """
 
-    def __init__(self, symbol, datetime, signal_type):
+    def __init__(self, symbol, datetime, signal_type, strength):
         """
         SignalEvent Constructor
 
@@ -41,6 +41,7 @@ class SignalEvent(Event):
         self.symbol = symbol
         self.datetime = datetime
         self.signal_type = signal_type
+        self.strength = strength
 
 
 class OrderEvent(Event):
@@ -72,7 +73,7 @@ class OrderEvent(Event):
         Outputs the values within the Order.
         """
         print(
-            f"Order: Symbol={self.symbol}, Type={self.order_Type}, Quantity={self.quantity}, Direction={self.direction}"
+            f"Order: Symbol={self.symbol}, Type={self.order_type}, Quantity={self.quantity}, Direction={self.direction}"
         )
 
 
@@ -92,7 +93,7 @@ class FillEvent(Event):
         quantity,
         direction,
         fill_cost,
-        comission=None,
+        commission=None,
     ):
         """
         If commission is not provided, the Fill object will
@@ -119,6 +120,10 @@ class FillEvent(Event):
 
         # Calculate commission
         if commission is None:
-            self.commission = self.calculate_ib_commission()
+            self.commission = self.calculate_commission()
         else:
             self.commission = commission
+    
+    def calculate_commission(self):
+        # TODO: make accurate commission calculation functions
+        return 0.05
