@@ -40,7 +40,7 @@ class Portfolio(object):
         raise NotImplementedError("Should implement update_fill()")
 
 # TODO: Needs to be more complex
-class NativePortfolio(Portfolio):
+class NaivePortfolio(Portfolio):
     """
     The NaivePortfolio object is designed to send orders to
     a brokerage object with a constant quantity size blindly,
