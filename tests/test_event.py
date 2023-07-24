@@ -35,7 +35,7 @@ def test_fill_no_comm():
     assert f_event.quantity == 100
     assert f_event.direction == 'BUY'
     assert f_event.fill_cost == 10
-    assert f_event.commission != 0
+    assert f_event.commission == 0
 
 def test_fill_comm():
     time = datetime.time

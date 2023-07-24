@@ -126,4 +126,4 @@ class FillEvent(Event):
     
     def calculate_commission(self):
         # TODO: make accurate commission calculation functions
-        return 0.05
+        return 0
