@@ -24,7 +24,7 @@ def test_order(capsys):
     assert o_event.direction == 'BUY'
     o_event.__repr__()
     captured = capsys.readouterr()
-    assert captured.out == 'Order: Symbol=GOOG, Type=MKT, Quantity=100, Direction=Buy'
+    assert captured.out == 'Order: Symbol=GOOG, Type=MKT, Quantity=100, Direction=BUY\n'
 
 def test_fill_no_comm():
     time = datetime.time
