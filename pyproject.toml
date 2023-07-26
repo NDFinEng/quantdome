@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "quantdome"
+version = "0.1.0"
+description = ""
+authors = ["painswor28 <painswor@nd.edu>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+numpy = "^1.25.1"
+pandas = "^1.5"
+alpaca-py = "^0.8.2"
+pytest = "^7.4.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
