@@ -10,6 +10,7 @@ def create_handler():
     return data.HistoricCSVDataHandler(events, 'C:\\Users\\rcken\\OneDrive\\Documents\\School Work\\SIBC\\Trinitas 2023\\Infra_Code\\quantdome\\historical_csv', ['GOOG_test'])
 
 def specific_csv_convert():
+    '''Creates simulated bars directory directly, rather than through handler.'''
     symbol_data = {'GOOG_test':pd.read_csv('C:\\Users\\rcken\\OneDrive\\Documents\\School Work\\SIBC\\Trinitas 2023\\Infra_Code\\quantdome\\historical_csv\\GOOG_test.csv',
                                            header=0, index_col=0, parse_dates=True,
                                            names=[
@@ -55,12 +56,14 @@ def test_historic_csv_init():
 
 def test_historic_update():
     bars = create_handler()
+    # simulates backtest, continually asking for new data
     while bars.continue_backtest:
         bars.update_bars()
         assert isinstance(bars.events.get(), event.MarketEvent)
         assert bars.latest_symbol_data['GOOG_test'] != []
 
 def test_get_latest_bars():
+    '''Tests data handler's get_latest_bars() function.'''
     bars = create_handler()
     assert bars.get_latest_bars('GOOG_test') == []
     bars.update_bars()
