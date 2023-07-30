@@ -55,7 +55,11 @@ def main():
                     elif event.type == 'FILL':
                         port.update_fill(event)
         
-        time.sleep(60)
+    port.create_equity_curve_dataframe()
+    stats = port.output_summary_stats()
+
+    print(port.equity_curve)
+    print(stats)
 
 
 if __name__ == '__main__':
