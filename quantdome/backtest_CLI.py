@@ -25,7 +25,7 @@ def main():
     events = queue.Queue()
     bars = data.HistoricCSVDataHandler(events, 'C:\\Users\\rcken\\OneDrive\\Documents\\School Work\\SIBC\\Trinitas 2023\\Infra_Code\\quantdome\\historical_csv', ['GOOG_test'])
     strategy = st(bars, events)
-    date = datetime.date(2023, 7, 13)
+    date = datetime.date(2023, 7, 11)
     port = pt.NativePortfolio(bars, events, date)
     broker = ex.SimulatedExecutionHandler(events)
 
