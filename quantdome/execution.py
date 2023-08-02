@@ -3,6 +3,7 @@ import datetime
 import queue
 from abc import ABCMeta, abstractmethod
 import random
+import time
 
 # local package imports
 from .event import FillEvent, OrderEvent
@@ -72,30 +73,32 @@ class SimulatedExecutionHandler(ExecutionHandler):
         """
         if event.type == 'ORDER':
 <<<<<<< HEAD
+<<<<<<< HEAD
             fill_event = FillEvent(datetime.datetime.now(), event.symbol,
                                    'Backtest', event.quantity, event.price)
             self.events.put(fill_event)
 =======
             
+=======
+
+>>>>>>> f8144ee (calculate market impact and slippage)
             # Calculate slippage based on order size and market volatility
-            slippage_model = self.calculate_slippage(event.quantity, self.calculate_market_volatility(event.symbol))
-            slippage_amount = event.fill_price * slippage_model
+            slippage_amount = self.calculate_slippage(event.quantity, self.calculate_market_volatility(event.symbol))
+            market_impact_amount = self.calculate_market_impact(event.quantity)
 
-            # Define the slippage model (you can customize this based on your requirements)
-            slippage_per_second = 0.0001  # Slippage per second (adjust this value as needed)
-            max_slippage = 0.02  # Maximum slippage allowed (adjust this value as needed)
+            # Simulate time latency (adjust latency_value as needed)
+            latency_value = 0.005  
+            time.sleep(latency_value) 
 
-            # Calculate slippage amount as a function of time
-            slippage_amount = min(time_elapsed * slippage_per_second, max_slippage)
-            market_impact_amount = event.fill_price * self.market_impact
-            # Adjust fill price with slippage and market impact
+             # Adjust fill price with slippage and market impact
             fill_price = event.fill_price + slippage_amount + market_impact_amount
+            
             fill_event = FillEvent(
                 datetime.datetime.utcnow(), event.symbol,
                 'ARCA', 
                 event.quantity, 
                 event.direction,
-                None)
+                fill_price)
             self.events.put(fill_event)
     
     def calculate_market_volatility(self, symbol):
@@ -110,13 +113,82 @@ class SimulatedExecutionHandler(ExecutionHandler):
 
     def calculate_slippage(self, order_quantity, market_volatility):
         """
-        Calculate slippage based on order size and market volatility.
-        This is a simplified example; in real-world scenarios,
-        you might use a more sophisticated slippage model.
-        """
-        # Example: linear slippage model with 0.01% slippage per unit of order size and 0.1% slippage per unit of volatility
-        slippage_per_unit_size = 0.0001
-        slippage_per_unit_volatility = 0.001
+        Calculate slippage based on order size and market volatility
+        using a Monte Carlo simulation approach.
 
+        Parameters:
+        order_quantity - The quantity of the order.
+        market_volatility - The estimated market volatility.
+
+        Returns:
+        Simulated slippage amount.
+        """
+        num_simulations = 1000  # Number of Monte Carlo simulations
+        slippage_per_unit_size = 0.0001  # Slippage per unit of order size
+        slippage_per_unit_volatility = 0.001  # Slippage per unit of market volatility
+
+        total_slippage = 0.0
+        for _ in range(num_simulations):
+            # Generate random variations in order size and market volatility
+            random_order_variation = random.uniform(0.9, 1.1)
+            random_volatility_variation = random.uniform(0.9, 1.1)
+            
+            # Calculate slippage for this simulation iteration
+            simulated_slippage = (
+                order_quantity * slippage_per_unit_size * random_order_variation +
+                market_volatility * slippage_per_unit_volatility * random_volatility_variation
+            )
+            
+            total_slippage += simulated_slippage
+
+        average_slippage = total_slippage / num_simulations
+        return average_slippage
+    
+
+    def calculate_market_impact(self, order_quantity):
+        """
+        Calculate market impact based on order quantity.
+
+        Parameters:
+        order_quantity - The quantity of the order.
+
+        Returns:
+        Market impact amount.
+        """
+        # Define market impact factors (adjust these values as needed)
+        market_impact_per_unit_size = 0.0002  # Market impact per unit of order size
+        max_market_impact = 0.01  # Maximum market impact allowed 
+        # Calculate market impact amount
+        market_impact_amount = order_quantity * market_impact_per_unit_size
+
+        # Ensure market impact doesn't exceed the maximum allowed
+        market_impact_amount = min(market_impact_amount, max_market_impact)
+        
+        return market_impact_amount
+    
+    def calculate_latency(self, order_quantity):
+        """
+        Calculate latency based on order quantity.
+
+        Parameters:
+        order_quantity - The quantity of the order.
+
+        Returns:
+        Latency amount.
+        """
+        # Define latency factors (adjust these values as needed)
+        pass
+        
+
+
+
+
+
+
+
+
+<<<<<<< HEAD
         return order_quantity * slippage_per_unit_size + market_volatility * slippage_per_unit_volatility
 >>>>>>> d6cf693 (addmarket volatility and slippage to execute order)
+=======
+>>>>>>> f8144ee (calculate market impact and slippage)
