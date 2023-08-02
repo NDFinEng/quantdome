@@ -2,6 +2,7 @@
 import datetime
 import queue
 from abc import ABCMeta, abstractmethod
+import random
 
 # local package imports
 from .event import FillEvent, OrderEvent
@@ -32,6 +33,8 @@ class ExecutionHandler(object):
         event - Contains an Event object with order information.
         """
         raise NotImplementedError("Should implement execute_order()")
+
+
     
 # TODO: increase the complexity of fill simulator to include slipage and market impact
 class SimulatedExecutionHandler(ExecutionHandler):
@@ -52,6 +55,10 @@ class SimulatedExecutionHandler(ExecutionHandler):
 
         Parameters:
         events - The Queue of Event objects.
+        slippage - The slippage to apply to the conversion from
+        Order to Fill.
+        market_impact - The market impact to apply to the conversion
+        from Order to Fill.
         """
         self.events = events
 
@@ -64,6 +71,52 @@ class SimulatedExecutionHandler(ExecutionHandler):
         event - Contains an Event object with order information.
         """
         if event.type == 'ORDER':
+<<<<<<< HEAD
             fill_event = FillEvent(datetime.datetime.now(), event.symbol,
                                    'Backtest', event.quantity, event.price)
             self.events.put(fill_event)
+=======
+            
+            # Calculate slippage based on order size and market volatility
+            slippage_model = self.calculate_slippage(event.quantity, self.calculate_market_volatility(event.symbol))
+            slippage_amount = event.fill_price * slippage_model
+
+            # Define the slippage model (you can customize this based on your requirements)
+            slippage_per_second = 0.0001  # Slippage per second (adjust this value as needed)
+            max_slippage = 0.02  # Maximum slippage allowed (adjust this value as needed)
+
+            # Calculate slippage amount as a function of time
+            slippage_amount = min(time_elapsed * slippage_per_second, max_slippage)
+            market_impact_amount = event.fill_price * self.market_impact
+            # Adjust fill price with slippage and market impact
+            fill_price = event.fill_price + slippage_amount + market_impact_amount
+            fill_event = FillEvent(
+                datetime.datetime.utcnow(), event.symbol,
+                'ARCA', 
+                event.quantity, 
+                event.direction,
+                None)
+            self.events.put(fill_event)
+    
+    def calculate_market_volatility(self, symbol):
+        """
+        Calculate market volatility for a given symbol.
+        This is a simplified example; in real-world scenarios,
+        we would use historical price data or other indicators
+        to estimate market volatility.
+        """
+        # Example: random market volatility between 0.005 and 0.02
+        return random.uniform(0.005, 0.02)
+
+    def calculate_slippage(self, order_quantity, market_volatility):
+        """
+        Calculate slippage based on order size and market volatility.
+        This is a simplified example; in real-world scenarios,
+        you might use a more sophisticated slippage model.
+        """
+        # Example: linear slippage model with 0.01% slippage per unit of order size and 0.1% slippage per unit of volatility
+        slippage_per_unit_size = 0.0001
+        slippage_per_unit_volatility = 0.001
+
+        return order_quantity * slippage_per_unit_size + market_volatility * slippage_per_unit_volatility
+>>>>>>> d6cf693 (addmarket volatility and slippage to execute order)
