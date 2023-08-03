@@ -4,14 +4,13 @@ import quantdome.data as data
 import quantdome.execution as ex
 import queue
 import datetime
-import time
 
 def main():
     # Try loading strategy name as execution argument
     try:
         name = sys.argv[1]
     except IndexError:
-        name = input('Please enter your strategy\'s name: ')
+        name = input('Please enter your strategy\'s name (without .py suffix): ')
 
     # Try importing module
     try:
@@ -26,7 +25,7 @@ def main():
     bars = data.HistoricCSVDataHandler(events, 'C:\\Users\\rcken\\OneDrive\\Documents\\School Work\\SIBC\\Trinitas 2023\\Infra_Code\\quantdome\\historical_csv', ['GOOG_test'])
     strategy = st(bars, events)
     date = datetime.date(2023, 7, 11)
-    port = pt.NativePortfolio(bars, events, date)
+    port = pt.NaivePortfolio(bars, events, date)
     broker = ex.SimulatedExecutionHandler(events)
 
     while True:
