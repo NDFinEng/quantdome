@@ -168,7 +168,22 @@ class SimulatedExecutionHandler(ExecutionHandler):
         Latency amount.
         """
         # Define latency factors (adjust these values as needed)
-        pass
+        base_latency = 0.001  # Base latency amount
+        latency_per_unit_size = 0.00005  # Latency per unit of order size
+        max_latency = 0.01  # Maximum latency allowed
+
+        # Calculate latency amount based on order quantity
+        latency_from_size = order_quantity * latency_per_unit_size
+
+        # Combine base latency and latency from order size
+        total_latency = base_latency + latency_from_size
+
+        # Ensure latency doesn't exceed the maximum allowed
+        total_latency = min(total_latency, max_latency)
+
+        return total_latency
+       
+
         
 
 
