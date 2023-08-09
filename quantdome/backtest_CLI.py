@@ -1,9 +1,10 @@
 import sys
 import quantdome.portfolio as pt
-import quantdome.data as data
+import quantdome.data as dt
 import quantdome.execution as ex
 import queue
 import datetime
+import matplotlib.pyplot as plt
 
 def main():
     # Try loading strategy name as execution argument
@@ -22,7 +23,7 @@ def main():
     
     # Initialize events, datahandler, strategy, portfolio, and broker
     events = queue.Queue()
-    bars = data.HistoricCSVDataHandler(events, 'C:\\Users\\rcken\\OneDrive\\Documents\\School Work\\SIBC\\Trinitas 2023\\Infra_Code\\quantdome\\historical_csv', ['GOOG_test'])
+    bars = dt.HistoricCSVDataHandler(events, 'C:\\Users\\rcken\\OneDrive\\Documents\\School Work\\SIBC\\Trinitas 2023\\Infra_Code\\quantdome\\historical_csv', ['GOOG_test'])
     strategy = st(bars, events)
     date = datetime.date(2023, 7, 11)
     port = pt.NaivePortfolio(bars, events, date)
@@ -57,8 +58,15 @@ def main():
     port.create_equity_curve_dataframe()
     stats = port.output_summary_stats()
 
-    print(port.equity_curve)
-    print(stats)
+    for stat in stats:
+        print(f'{stat[0]}: {stat[1]}')
+        
+    fig, ax = plt.subplots()
+    ax.plot(port.equity_curve.index.values, port.equity_curve.loc[:,"total"])
+    ax.set(xlabel='Date', ylabel='Total Return', title='Equity Curve')
+    ax.grid()
+    fig.savefig('eq.png')
+    plt.show()
 
 
 if __name__ == '__main__':
