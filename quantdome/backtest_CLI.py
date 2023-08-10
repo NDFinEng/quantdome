@@ -13,7 +13,7 @@ def main():
     except IndexError:
         name = input('Please enter your strategy\'s name (without .py suffix): ')
 
-    # Try importing module
+    # Try importing module class must be same name as file
     try:
         st = getattr(__import__("strategies.%s" % name, fromlist=[name]), name)
         # Equivalent to: from strategies.name import name as st
@@ -29,12 +29,14 @@ def main():
     port = pt.NaivePortfolio(bars, events, date)
     broker = ex.SimulatedExecutionHandler(events)
 
+    # Loop over each bar
     while True:
         if bars.continue_backtest:
             bars.update_bars()
         else:
             break
 
+        # Interpret events
         while True:
             try:
                 event = events.get(False)
@@ -54,13 +56,16 @@ def main():
 
                     elif event.type == 'FILL':
                         port.update_fill(event)
-        
+
+    # Retrieve backtest results 
     port.create_equity_curve_dataframe()
     stats = port.output_summary_stats()
 
+    # Print statistics
     for stat in stats:
         print(f'{stat[0]}: {stat[1]}')
-        
+
+    # Display equity curve
     fig, ax = plt.subplots()
     ax.plot(port.equity_curve.index.values, port.equity_curve.loc[:,"total"])
     ax.set(xlabel='Date', ylabel='Total Return', title='Equity Curve')
