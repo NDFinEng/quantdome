@@ -1,10 +1,12 @@
 # Standard Library Imports
 import datetime
+import time # for the sleep since Alpacas is up to the minute
 import os, os.path
 from abc import ABCMeta, abstractmethod
 
 # Third Party Imports
 import pandas as pd
+import alpaca_trade_api as tradeapi
 
 # Local Package Imports
 from .event import MarketEvent
@@ -152,3 +154,65 @@ class HistoricCSVDataHandler(DataHandler):
                 if bar is not None:
                     self.latest_symbol_data[s].append(bar)
         self.events.put(MarketEvent())
+
+
+class LiveDataHandler(DataHandler):
+    """
+    LiveDataHandler is designed to obtain live 
+    data from the Alpaca API
+    """
+    def __init__(self, events, symbol_list, api_key, api_secret, url):
+        '''
+        Initializing the data handler with some Alpaca keys etc
+
+        Parameters:
+        events - The Event Queue
+        symbol_list - A list of symbol strings
+        api_key - Unique Alpaca API key
+        api_secret - Unique Alpaca secret key
+        url - The url that brings you to the paper trading followed by the symbol
+        '''
+
+        self.events         = events
+        self.symbol_list    = symbol_list
+        self.url            = "https://paper-api.alpaca.markets"
+        self.api_key        = api_key
+        self.api_secret     = api_secret
+
+        # Initializing the Alpaca API
+        self.api            = tradeapi.REST(api_key, api_secret, url)
+
+        # Structure to store the data that we've been collecting
+        self.latest_symbol_data = {} 
+
+        for s in symbol_list:
+            self.latest_symbol_data[symbol] = []
+
+
+    def _get_new_bar(self, symbol):
+        """
+        Returns the latest bar from Alpaca as a tuple of 
+        (symbol, date, open, low, high, close, volume)
+        """
+        bar = self.api.get_barset(symbol, '1Min', limit = 1)[symbol][0]
+        print(bar) # for test purposes
+        return tuple([symbol, bar.time, bar.open, bar.low, bar.high, bar.close, bar.volume])
+
+
+    def update_bars(self):
+        """
+        Pushes the data we've been collecting into the 
+        latest_symbol_data structure for any symbol in
+        the list
+        """
+        while True:
+            for s in self.symbol_list:
+                try:
+                    bar = self._get_new_bar(symbol)
+                except Exception as e:
+                    print(f'Error fetching live data for {symbol}: {e}')
+                else:
+                    self.latest_symbol_data[symbol].append(bar)
+                    self.events.put(MarketEvent()) # New market event
+
+            time.sleep(60) # the Alpaca site updates once every 60 seconds
