@@ -175,7 +175,7 @@ class LiveDataHandler(DataHandler):
         # api_key             = decouple.config('ALPACA_KEY')
         # api_secret          = decouple.config('ALPACA_SECRET')
 
-        stock_stream = StockDataStream('CKOGVWSOIK34QOLIPE3G', 'vgotXrfADUoNFZqvFalbY6fS0zgQzaEB6HWqLxT7')
+        stock_stream = StockDataStream('API_KEY', 'API_SECRET')
 
         for s in symbol_list:
             stock_stream.subscribe_bars(self._get_new_bar, s)
@@ -203,6 +203,7 @@ class LiveDataHandler(DataHandler):
         temp_df["volume"] = [bars.volume]
 
         print(temp_df)
+        # TODO: temp_df needs to be a tuple, I'm not sure of the format of bars as well
         self.latest_symbol_data[bars.symbol].append(temp_df)
         self.events.put(MarketEvent())
 
