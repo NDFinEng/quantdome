@@ -6,7 +6,7 @@ from abc import ABCMeta, abstractmethod
 
 # Third Party Imports
 import pandas as pd
-import alpaca_trade_api as tradeapi
+from alpaca.data.live import StockDataStream
 
 # Local Package Imports
 from .event import MarketEvent
@@ -161,42 +161,59 @@ class LiveDataHandler(DataHandler):
     LiveDataHandler is designed to obtain live 
     data from the Alpaca API
     """
-    def __init__(self, events, symbol_list, api_key, api_secret, url):
+    def __init__(self, events, symbol_list):
         '''
         Initializing the data handler with some Alpaca keys etc
 
         Parameters:
         events - The Event Queue
         symbol_list - A list of symbol strings
-        api_key - Unique Alpaca API key
-        api_secret - Unique Alpaca secret key
-        url - The url that brings you to the paper trading followed by the symbol
         '''
 
         self.events         = events
         self.symbol_list    = symbol_list
-        self.url            = "https://paper-api.alpaca.markets"
-        self.api_key        = api_key
-        self.api_secret     = api_secret
+        # api_key             = decouple.config('ALPACA_KEY')
+        # api_secret          = decouple.config('ALPACA_SECRET')
 
-        # Initializing the Alpaca API
-        self.api            = tradeapi.REST(api_key, api_secret, url)
+        stock_stream = StockDataStream('CKOGVWSOIK34QOLIPE3G', 'vgotXrfADUoNFZqvFalbY6fS0zgQzaEB6HWqLxT7')
 
+        for s in symbol_list:
+            stock_stream.subscribe_bars(self._get_new_bar, s)
+        
+        stock_stream.run()
         # Structure to store the data that we've been collecting
         self.latest_symbol_data = {} 
 
         for s in symbol_list:
-            self.latest_symbol_data[symbol] = []
+            self.latest_symbol_data[s] = []
 
+    async def _get_new_bar(self, bars):
+        print(bars)
+        temp_df = pd.DataFrame(
+            columns=["symbol", "time", "open", "low", "high", "close", "volume"]
+        )
+    
+        present_time = datetime.utcfromtimestamp(bars.timestamp/10**9).strftime("%Y-%m-%d %H:%M:%S")
+        temp_df["symbol"] = [bars.symbol]
+        temp_df["time"] = [present_time]
+        temp_df["open"] = [bars.open]
+        temp_df["high"] = [bars.high]
+        temp_df["low"] = [bars.low]
+        temp_df["close"] = [bars.close]
+        temp_df["volume"] = [bars.volume]
 
-    def _get_new_bar(self, symbol):
+        print(temp_df)
+        self.latest_symbol_data[bars.symbol].append(temp_df)
+        self.events.put(MarketEvent())
+
+    '''def _get_new_bar(self, symbol):
         """
         Returns the latest bar from Alpaca as a tuple of 
         (symbol, date, open, low, high, close, volume)
         """
         bar = self.api.get_barset(symbol, '1Min', limit = 1)[symbol][0]
         print(bar) # for test purposes
-        return tuple([symbol, bar.time, bar.open, bar.low, bar.high, bar.close, bar.volume])
+        return tuple([symbol, bar.time, bar.open, bar.low, bar.high, bar.close, bar.volume])'''
 
 
     def update_bars(self):
@@ -208,11 +225,11 @@ class LiveDataHandler(DataHandler):
         while True:
             for s in self.symbol_list:
                 try:
-                    bar = self._get_new_bar(symbol)
+                    bar = self._get_new_bar(s)
                 except Exception as e:
-                    print(f'Error fetching live data for {symbol}: {e}')
+                    print(f'Error fetching live data for {s}: {e}')
                 else:
-                    self.latest_symbol_data[symbol].append(bar)
+                    self.latest_symbol_data[s].append(bar)
                     self.events.put(MarketEvent()) # New market event
 
             time.sleep(60) # the Alpaca site updates once every 60 seconds
