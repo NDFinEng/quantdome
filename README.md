@@ -17,7 +17,7 @@ To use use this code locally:
 
 ## Running a Strategy Backtest
 ### 1. Creating a strategy file
-Inside the [strategies folder](strategies), create a new .py file and name the file after your strategy.
+Inside the [strategies folder](strategies), create a new .py file and name the file after your strategy. (Note: the file should have the same name as the class of the strategy. For example, this file should be named ExampleStrategy.py because we later create a class called ExampleStrategy)
 
 Import the strategy and event classes from the quantdome folder like so:
 ```python
