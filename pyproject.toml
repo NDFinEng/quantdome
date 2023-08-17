@@ -11,6 +11,7 @@ numpy = "^1.25.1"
 pandas = "^1.5"
 alpaca-py = "^0.8.2"
 pytest = "^7.4.0"
+matplotlib = "^3.7.2"
 
 
 [build-system]
