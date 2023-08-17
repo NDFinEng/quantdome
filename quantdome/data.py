@@ -175,48 +175,51 @@ class LiveDataHandler(DataHandler):
         # api_key             = decouple.config('ALPACA_KEY')
         # api_secret          = decouple.config('ALPACA_SECRET')
 
-        stock_stream = StockDataStream('API_KEY', 'API_SECRET')
+        stock_stream = StockDataStream('PK3CUW84A4FCFA3WJGWZ', 'hkhoufIN259azCiafqgyQlfcgdvYShhmgH552brm')
 
-        for s in symbol_list:
-            stock_stream.subscribe_bars(self._get_new_bar, s)
-        
-        stock_stream.run()
         # Structure to store the data that we've been collecting
         self.latest_symbol_data = {} 
 
         for s in symbol_list:
+            stock_stream.subscribe_bars(self._get_new_bar, s)
             self.latest_symbol_data[s] = []
 
+        self.run_connection(stock_stream)
+
     async def _get_new_bar(self, bars):
+        """
+        Returns the latest bar from Alpaca as a tuple of 
+        (symbol, date, open, low, high, close, volume)
+        """
         print(bars)
-        temp_df = pd.DataFrame(
-            columns=["symbol", "time", "open", "low", "high", "close", "volume"]
-        )
-    
         present_time = datetime.utcfromtimestamp(bars.timestamp/10**9).strftime("%Y-%m-%d %H:%M:%S")
-        temp_df["symbol"] = [bars.symbol]
+        '''temp_df["symbol"] = [bars.symbol]
         temp_df["time"] = [present_time]
         temp_df["open"] = [bars.open]
         temp_df["high"] = [bars.high]
         temp_df["low"] = [bars.low]
         temp_df["close"] = [bars.close]
-        temp_df["volume"] = [bars.volume]
+        temp_df["volume"] = [bars.volume]'''
+        return tuple()
 
         print(temp_df)
         # TODO: temp_df needs to be a tuple, I'm not sure of the format of bars as well
         self.latest_symbol_data[bars.symbol].append(temp_df)
         self.events.put(MarketEvent())
 
-    '''def _get_new_bar(self, symbol):
-        """
-        Returns the latest bar from Alpaca as a tuple of 
-        (symbol, date, open, low, high, close, volume)
-        """
-        bar = self.api.get_barset(symbol, '1Min', limit = 1)[symbol][0]
-        print(bar) # for test purposes
-        return tuple([symbol, bar.time, bar.open, bar.low, bar.high, bar.close, bar.volume])'''
-
-
+    def run_connection(self, stream):
+        try: 
+            stream.run()
+        except KeyboardInterrupt:
+            print("Interrupted execution by user")
+            stream.stop_ws()
+            exit(0)
+        except Exception as e:
+            print(f'Exception from websocket connection: {e}')
+            print(f'Trying to re-establish connection...')
+            time.sleep(3)
+            self.run_connection(stream)
+        
     def update_bars(self):
         """
         Pushes the data we've been collecting into the 
