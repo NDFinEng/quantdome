@@ -13,7 +13,8 @@ alpaca-py = "^0.8.2"
 pytest = "^7.4.0"
 matplotlib = "^3.7.2"
 python-decouple = "^3.8"
-mysql-connector-python = "^8.1.0"
+pyscopg2 = "^66.0.2"
+psycopg2 = "^2.9.6"
 
 
 [tool.poetry.group.test.dependencies]

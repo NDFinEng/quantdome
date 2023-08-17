@@ -9,6 +9,7 @@ import pandas as pd
 # Local Package Imports
 from .event import MarketEvent
 
+from .helpers import connect_database
 
 class DataHandler(object):
     """
@@ -152,3 +153,40 @@ class HistoricCSVDataHandler(DataHandler):
                 if bar is not None:
                     self.latest_symbol_data[s].append(bar)
         self.events.put(MarketEvent())
+
+
+class HistoricalDBDataHandler(DataHandler):
+
+    def __init__(self, events, symbol_list, start_date, end_date, bar_size=1):
+        self.db = connect_database()
+        self.events = events
+        self.symbol_list = symbol_list
+        self.latest_symbol_data = {}
+        self.symbol_data = {}
+        self.start_date = start_date
+        self.end_date = end_date
+        self.bar_size = bar_size
+        self.chunk_size = datetime.timedelta(days=1)
+        self.chunk_start = start_date
+
+    def _get_lastest_chunk(self, chunk_start_date):
+        cursor = self.db.cursor()
+        chunk_end_date = chunk_start_date + self.chunk_size
+
+        for symbol in self.symbol_list:
+            params = (chunk_start_date, chunk_end_date, self.bar_size, symbol)
+            query = """
+            SELECT *
+            FROM bars
+            WHERE timestamp BETWEEN %s AND %s
+                AND EXTRACT(MINUTE FROM timestamp) %% %s = 0
+                AND symbol = %s
+            ORDER BY timestamp;
+            """
+
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+
+            self.symbol_data[symbol] = 
+        
+

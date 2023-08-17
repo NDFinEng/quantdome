@@ -18,7 +18,7 @@ class AlpacaExecutionHandler():
     def getHistoricalData(self):
 
         start = datetime.datetime(2023, 6, 1)
-        end = datetime.datetime(2023, 6, 30)
+        end = datetime.datetime(2023, 6, 2)
 
         request_params = StockBarsRequest(
             symbol_or_symbols=['AAPL'],
@@ -41,9 +41,3 @@ class AlpacaExecutionHandler():
         )
 
         return self.dataClient.get_stock_quotes(request_params)
-
-
-
-
-        
-
