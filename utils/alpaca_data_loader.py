@@ -138,8 +138,8 @@ def main():
     count = 0
 
     # Specify the start and end dates for fetching historical data
-    start_date = datetime(2023, 6, 7)
-    end_date = datetime(2023, 6, 30)
+    start_date = datetime(2023, 7, 1)
+    end_date = datetime(2023, 7, 31)
 
     # List to store the futures returned by ThreadPoolExecutor
     futures = []

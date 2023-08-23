@@ -8,7 +8,6 @@ import pandas as pd
 
 # Local Package Imports
 from .event import MarketEvent
-
 from .helpers import connect_database
 
 class DataHandler(object):
@@ -161,20 +160,23 @@ class HistoricalDBDataHandler(DataHandler):
         self.db = connect_database()
         self.events = events
         self.symbol_list = symbol_list
-        self.latest_symbol_data = {}
-        self.symbol_data = {}
         self.start_date = start_date
         self.end_date = end_date
         self.bar_size = bar_size
-        self.chunk_size = datetime.timedelta(days=1)
-        self.chunk_start = start_date
 
-    def _get_lastest_chunk(self, chunk_start_date):
+        self.symbol_data = {}
+        self.latest_symbol_data = {}
+
+        self.chunk_start_date = start_date
+        self.chunk_size = datetime.timedelta(days=1)
+
+    def _get_lastest_chunk(self):
         cursor = self.db.cursor()
-        chunk_end_date = chunk_start_date + self.chunk_size
+        chunk_end_date = self.chunk_start_date + self.chunk_size
+        self.latest_symbol_data[s] = []
 
         for symbol in self.symbol_list:
-            params = (chunk_start_date, chunk_end_date, self.bar_size, symbol)
+            params = (self.chunk_start_date, chunk_end_date, self.bar_size, symbol)
             query = """
             SELECT *
             FROM bars
@@ -187,6 +189,42 @@ class HistoricalDBDataHandler(DataHandler):
             cursor.execute(query, params)
             rows = cursor.fetchall()
 
-            self.symbol_data[symbol] = 
-        
+            self.symbol_data[symbol] = rows
 
+        self.chunk_start_date = chunk_end_date
+
+
+    def _get_new_bar(self, symbol):
+        """
+        Returns the latest bar from the data feed as a tuple of 
+        (sybmbol, datetime, open, low, high, close, volume).
+        """
+        
+        while self.chunk_start_date < self.end_date:
+
+            self._get_lastest_chunk()
+
+            for bar in self.symbol_data[symbol]:
+                yield tuple([bar['symbol'], bar['timestamp'], bar['open'], bar['low'], bar['high'], bar['close'], bar['volume']])
+
+    def get_latest_bars(self, symbol, N=1):
+        
+        try:
+            bars_list = self.latest_symbol_data[symbol]
+        except KeyError:
+            print('That symbol is not available in the historical data set')
+        else:
+            return bars_list[-N:]
+
+    def update_bars(self):
+
+        for s in self.symbol_list:
+
+            try:
+                bar = next(self._get_new_bar(s))
+            except StopIteration:
+                self.continue_backtest = False
+            else:
+                if bar is not None:
+                    self.latest_symbol_data[s].append(bar)
+        self.events.put(MarketEvent())
