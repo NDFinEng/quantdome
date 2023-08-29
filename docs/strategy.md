@@ -58,3 +58,4 @@ class SimpleAppleStrategy(Strategy):
 
     return signals
 ```
+**Note:** The strategy does not have to redefine `set_tickers()` as it is properly defined in the `Strategy` base class
