@@ -183,7 +183,7 @@ class LiveDataHandler(DataHandler):
         for s in symbol_list:
             stock_stream.subscribe_bars(self._get_new_bar, s)
             self.latest_symbol_data[s] = []
-
+   
         self.run_connection(stock_stream)
 
     async def _get_new_bar(self, bars):
