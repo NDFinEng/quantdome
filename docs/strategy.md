@@ -30,7 +30,7 @@ This is the meat of every strategy.  Everytime a market update is recieved, this
 
 ## Quick Example
 
-Here's a quick example of a very simple strategy that will buy Apple stock if it breaks below $180.00 and rallies above $190.00
+Here's a quick example of a very simple strategy that will buy Apple stock if it breaks below $180.00 and sell Apple stock if it rallies above $190.00
 
 ```Python
 class SimpleAppleStrategy(Strategy):
