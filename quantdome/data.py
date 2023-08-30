@@ -191,20 +191,10 @@ class LiveDataHandler(DataHandler):
         Returns the latest bar from Alpaca as a tuple of 
         (symbol, date, open, low, high, close, volume)
         """
-        print(bars)
         present_time = datetime.datetime.fromtimestamp(bars.timestamp.timestamp(), tz=datetime.UTC).strftime("%Y-%m-%d %H:%M:%S")
-        '''temp_df["symbol"] = [bars.symbol]
-        temp_df["time"] = [present_time]
-        temp_df["open"] = [bars.open]
-        temp_df["high"] = [bars.high]
-        temp_df["low"] = [bars.low]
-        temp_df["close"] = [bars.close]
-        temp_df["volume"] = [bars.volume]'''
-        return tuple()
+        data = tuple([bars.symbol, present_time, bars.open, bars.low, bars.high, bars.close, bars.volume])
 
-        print(temp_df)
-        # TODO: temp_df needs to be a tuple, I'm not sure of the format of bars as well
-        self.latest_symbol_data[bars.symbol].append(temp_df)
+        self.latest_symbol_data[bars.symbol].append(data)
         self.events.put(MarketEvent())
 
     def run_connection(self, stream):
