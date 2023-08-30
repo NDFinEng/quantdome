@@ -192,7 +192,7 @@ class LiveDataHandler(DataHandler):
         (symbol, date, open, low, high, close, volume)
         """
         print(bars)
-        present_time = datetime.utcfromtimestamp(bars.timestamp/10**9).strftime("%Y-%m-%d %H:%M:%S")
+        present_time = datetime.datetime.fromtimestamp(bars.timestamp.timestamp(), tz=datetime.UTC).strftime("%Y-%m-%d %H:%M:%S")
         '''temp_df["symbol"] = [bars.symbol]
         temp_df["time"] = [present_time]
         temp_df["open"] = [bars.open]
