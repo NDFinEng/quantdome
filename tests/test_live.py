@@ -13,6 +13,7 @@ def create_handler():
 
 def run_test():
     bars = create_handler()
-    print(bars.getLiveData())
+    print('test')
+    print(bars.bars_data_handler())
 
 run_test()
