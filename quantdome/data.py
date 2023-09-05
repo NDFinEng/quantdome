@@ -199,17 +199,13 @@ class LiveDataHandler(DataHandler):
         self.events.put(MarketEvent())
 
     def run_connection(self, stream):
-        try: 
-            stream.run()
-        except KeyboardInterrupt:
-            print("Interrupted execution by user")
-            stream.stop_ws()
-            exit(0)
-        except Exception as e:
-            print(f'Exception from websocket connection: {e}')
-            print(f'Trying to re-establish connection...')
-            time.sleep(3)
-            self.run_connection(stream)
+        '''Initiates a running connection. When connection is terminated 
+        (i.e. via ctrl+c) then the program exits. Severing the connection 
+        takes a few seconds.'''
+        stream.run()
+
+        print("Connection closed.")
+        exit(0)
         
     def get_latest_bars(self, symbol, N=1):
         """
@@ -219,7 +215,7 @@ class LiveDataHandler(DataHandler):
         try:
             bars_list = self.latest_symbol_data[symbol]
         except KeyError:
-            print("That symbol is not available in the historical data set.")
+            print("That symbol was not entered in the symbol list.")
         else:
             return bars_list[-N:]
         
