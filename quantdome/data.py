@@ -194,6 +194,7 @@ class LiveDataHandler(DataHandler):
         present_time = datetime.datetime.fromtimestamp(bars.timestamp.timestamp(), tz=datetime.UTC).strftime("%Y-%m-%d %H:%M:%S")
         data = tuple([bars.symbol, present_time, bars.open, bars.low, bars.high, bars.close, bars.volume])
 
+        print(data)
         self.latest_symbol_data[bars.symbol].append(data)
         self.events.put(MarketEvent())
 
@@ -210,20 +211,21 @@ class LiveDataHandler(DataHandler):
             time.sleep(3)
             self.run_connection(stream)
         
+    def get_latest_bars(self, symbol, N=1):
+        """
+        Returns the last N bars from the latest_symbol list,
+        or N-k if less available.
+        """
+        try:
+            bars_list = self.latest_symbol_data[symbol]
+        except KeyError:
+            print("That symbol is not available in the historical data set.")
+        else:
+            return bars_list[-N:]
+        
     def update_bars(self):
         """
-        Pushes the data we've been collecting into the 
-        latest_symbol_data structure for any symbol in
-        the list
+        Pushes the latest bar to the latest symbol structure
+        for all symbols in the symbol list.
         """
-        while True:
-            for s in self.symbol_list:
-                try:
-                    bar = self._get_new_bar(s)
-                except Exception as e:
-                    print(f'Error fetching live data for {s}: {e}')
-                else:
-                    self.latest_symbol_data[s].append(bar)
-                    self.events.put(MarketEvent()) # New market event
-
-            time.sleep(60) # the Alpaca site updates once every 60 seconds
+        raise NotImplementedError("Live data handlers do not require manual calls to update bars, as bars are updated automatically.")
