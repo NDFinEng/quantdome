@@ -12,6 +12,7 @@ pandas = "^1.5"
 alpaca-py = "^0.8.2"
 pytest = "^7.4.0"
 decouple = "^0.0.7"
+matplotlib = "^3.7.2"
 
 
 [build-system]
