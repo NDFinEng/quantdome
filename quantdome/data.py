@@ -223,4 +223,4 @@ class LiveDataHandler(DataHandler):
         Pushes the latest bar to the latest symbol structure
         for all symbols in the symbol list.
         """
-        raise NotImplementedError("Live data handlers do not require manual calls to update bars, as bars are updated automatically.")
+        pass
