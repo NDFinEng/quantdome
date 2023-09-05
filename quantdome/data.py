@@ -1,6 +1,5 @@
 # Standard Library Imports
 import datetime
-import time # for the sleep since Alpacas is up to the minute
 import os, os.path
 from abc import ABCMeta, abstractmethod
 
