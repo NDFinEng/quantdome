@@ -4,8 +4,7 @@ The core of every algorithm is defined by and inherits from the `quantdome.strat
 ## Structure Overview
 Each strategy must invoke the following methods:
 1. `__init__(self)`
-2. `set_tickers(self, tickers: list[string]) -> None`
-3. `process_signals(self, data: quantdome.MarketData) -> list[quantdome.SignalEvent]`
+2. `process_signals(self, data: quantdome.MarketData) -> list[quantdome.SignalEvent]`
 
 Let's now look at what each method does:
 ### `__init__(self)`
@@ -14,12 +13,6 @@ Let's now look at what each method does:
 
 This is the initialization or constructor method for the `strategy` class.  It defines any member variables needed for the class and can take any inputs as desired.
 
-### `set_tickers(self, tickers: list[string]) -> None`
-- *Inputs*: a list of tickers (`strings`) which the strategy should listen for
-- *Outputs*: none
-
-This method sets the tickers which the strategy should listen for.  This allows input to the following method to be reduced to only necessary data rather than all market noise.
-This should be set before the strategy is turned on.
 
 ### `process_signals(self, data: quantdome.MarketData) -> list[quantdome.SignalEvent]`
 - *Inputs*: the quantdome market data structure containing the latest market data
@@ -30,7 +23,7 @@ This is the meat of every strategy.  Everytime a market update is recieved, this
 
 ## Quick Example
 
-Here's a quick example of a very simple strategy that will buy Apple stock if it breaks below $180.00 and sell Apple stock if it rallies above $190.00
+Here's a quick example of a very simple strategy that will buy Apple stock if it breaks below \$180.00 and sell Apple stock if it rallies above \$190.00
 
 ```Python
 class SimpleAppleStrategy(Strategy):
@@ -45,11 +38,11 @@ class SimpleAppleStrategy(Strategy):
 
     for d in data: # iterate through data list
       if d == 'AAPL': #only run logic on apple stocks
-        if d.price < buyPrice: # current market price is below our buy point, let's buy
-          signal = MarketSignal(d.price, 1)
+        if d.price < self.buyPrice: # current market price is below our buy point, let's buy
+          signal = SignalEvent('AAPL', d.close, 1)
 
-        elif d.price > sellPrice: #current market price is above our sell point, let's sell
-          signal = MarketSignal(d.price, -1)
+        elif d.price > self.sellPrice: #current market price is above our sell point, let's sell
+          signal = SignalEvent('AAPL', d.price, -1)
 
         else: # otherwise the price is between, do nothing
           pass
@@ -58,4 +51,4 @@ class SimpleAppleStrategy(Strategy):
 
     return signals
 ```
-**Note:** The strategy does not have to redefine `set_tickers()` as it is properly defined in the `Strategy` base class
+

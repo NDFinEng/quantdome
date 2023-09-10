@@ -8,7 +8,7 @@ import pandas as pd
 
 # Local Package Imports
 from .event import MarketEvent
-
+from .helpers import connect_database
 
 class DataHandler(object):
     """
@@ -52,7 +52,7 @@ class HistoricCSVDataHandler(DataHandler):
 
     def __init__(self, events, csv_dir, symbol_list):
         """
-        Initialises the historic data handler by requesting
+        Initializes the historic data handler by requesting
         the location of the CSV files and a list of symbols.
 
         It will be assumed that all files are of the form
@@ -120,7 +120,7 @@ class HistoricCSVDataHandler(DataHandler):
     def _get_new_bar(self, symbol):
         """
         Returns the latest bar from the data feed as a tuple of 
-        (sybmbol, datetime, open, low, high, close, volume).
+        (symbol, datetime, open, low, high, close, volume).
         """
         for b in self.symbol_data[symbol]:
             yield tuple([symbol, datetime.datetime.strptime(str(b[0]), '%Y-%m-%d %H:%M:%S'), 
@@ -143,7 +143,86 @@ class HistoricCSVDataHandler(DataHandler):
         Pushes the latest bar to the latest_symbol_data structure
         for all symbols in the symbol list.
         """
+        event = MarketEvent()
+
         for s in self.symbol_list:
+            try:
+                bar = next(self._get_new_bar(s))
+            except StopIteration:
+                self.continue_backtest = False
+            else:
+                if bar is not None:
+                    self.latest_symbol_data[s].append(bar)
+                    event.add_ticker(*bar)
+        self.events.put(event)
+
+
+class HistoricalDBDataHandler(DataHandler):
+
+    def __init__(self, events, symbol_list, start_date, end_date, bar_size=1):
+        self.db = connect_database()
+        self.events = events
+        self.symbol_list = symbol_list
+        self.start_date = start_date
+        self.end_date = end_date
+        self.bar_size = bar_size
+
+        self.symbol_data = {}
+        self.latest_symbol_data = {}
+
+        self.chunk_start_date = start_date
+        self.chunk_size = datetime.timedelta(days=1)
+
+    def _get_lastest_chunk(self):
+        cursor = self.db.cursor()
+        chunk_end_date = self.chunk_start_date + self.chunk_size
+        self.latest_symbol_data[s] = []
+
+        for symbol in self.symbol_list:
+            params = (self.chunk_start_date, chunk_end_date, self.bar_size, symbol)
+            query = """
+            SELECT *
+            FROM bars
+            WHERE timestamp BETWEEN %s AND %s
+                AND EXTRACT(MINUTE FROM timestamp) %% %s = 0
+                AND symbol = %s
+            ORDER BY timestamp;
+            """
+
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+
+            self.symbol_data[symbol] = rows
+
+        self.chunk_start_date = chunk_end_date
+
+
+    def _get_new_bar(self, symbol):
+        """
+        Returns the latest bar from the data feed as a tuple of 
+        (sybmbol, datetime, open, low, high, close, volume).
+        """
+        
+        while self.chunk_start_date < self.end_date:
+
+            self._get_lastest_chunk()
+
+            for bar in self.symbol_data[symbol]:
+                yield tuple([bar['symbol'], bar['timestamp'], bar['open'], bar['low'], bar['high'], bar['close'], bar['volume']])
+
+    def get_latest_bars(self, symbol, N=1):
+        
+        try:
+            bars_list = self.latest_symbol_data[symbol]
+        except KeyError:
+            print('That symbol is not available in the historical data set')
+        else:
+            return bars_list[-N:]
+
+    def update_bars(self):
+
+        for s in self.symbol_list:
+
             try:
                 bar = next(self._get_new_bar(s))
             except StopIteration:
