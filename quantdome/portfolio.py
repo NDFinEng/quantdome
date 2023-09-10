@@ -263,3 +263,39 @@ class NaivePortfolio(Portfolio):
         return stats
 
 # TODO: Later Versions will consider position sizing and risk management
+
+# including the parents classes
+class PortfolioState(NaivePortfolio, Portfolio):
+    """
+    The PortfolioState object is designed to take in 
+    a portfolio and then identify and return
+    the state of the portfolio.
+    """
+
+    def __init__(self, port):
+        # the portfolio to be analyzed
+        self.port = port
+
+    
+    def get_current_state(self):
+        """
+        This method gets the current state of the porfolio by returning the 
+        current holdings of the portfolio
+
+        Return:
+        a tuple containing the state of the portfolio
+        """
+
+        # getting the holdings and positions
+        holdings    = self.port.current_holdings
+        positions   = self.port.current_positions.copy()
+
+        state = tuple(
+            holdings['datetime'],
+            holdings['cash'],
+            holdings['comission'],
+            holdings['total'],
+            positions
+        )
+
+        return state
