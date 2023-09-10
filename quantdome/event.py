@@ -113,7 +113,7 @@ class FillEvent(Event):
         """
 
         self.type = "FILL"
-        self.timeindex = timeindex
+        self.timestamp = timeindex
         self.symbol = symbol
         self.exchange = exchange
         self.quantity = quantity
