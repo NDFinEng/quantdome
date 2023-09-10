@@ -1,3 +1,5 @@
+import datetime
+
 class Event(object):
     """
     Event is base class providing an interface for all subsequent
@@ -19,7 +21,19 @@ class MarketEvent(Event):
         MarketEvent Constructor
         """
         self.type = "MARKET"
+        self.data = {}
 
+    def add_ticker(self, ticker, timestamp, open, low, high, close, volume):
+
+        self.data[ticker] = {
+            "timestamp": timestamp,
+            "open": open,
+            "high": high,
+            "low": low,
+            "close": close,
+            "volume": volume,
+        }
+        
 
 class SignalEvent(Event):
     """
@@ -27,21 +41,19 @@ class SignalEvent(Event):
     This is received by a Portfolio object and acted upon.
     """
 
-    def __init__(self, symbol, datetime, signal_type, strength):
+    def __init__(self, symbol, price, quantity):
         """
         SignalEvent Constructor
-
-        Parameters:
-        symbol - Ticker symbol
-        datetime - Timestamp at which the signal was generated
-        signal_type - 'LONG' or 'SHORT'
+        symbol - ticker to trade
+        price - price to trade at
+        quantity - quantity to trade (negative for sell)
         """
 
         self.type = "SIGNAL"
         self.symbol = symbol
-        self.datetime = datetime
-        self.signal_type = signal_type
-        self.strength = strength
+        self.price = price
+        self.quantity = quantity
+        self.datetime = datetime.datetime.now()
 
 
 class OrderEvent(Event):
@@ -51,7 +63,7 @@ class OrderEvent(Event):
     quantity and a direction.
     """
 
-    def __init__(self, symbol, order_type, quantity, direction):
+    def __init__(self, symbol, price, quantity):
         """
         OrderEvent Constructor
 
@@ -64,17 +76,9 @@ class OrderEvent(Event):
 
         self.type = "ORDER"
         self.symbol = symbol
-        self.order_type = order_type
+        self.price = price
         self.quantity = quantity
-        self.direction = direction
-
-    def __repr__(self):
-        """
-        Outputs the values within the Order.
-        """
-        print(
-            f"Order: Symbol={self.symbol}, Type={self.order_type}, Quantity={self.quantity}, Direction={self.direction}"
-        )
+        self.datetime = datetime.datetime.now()
 
 
 class FillEvent(Event):
@@ -91,7 +95,6 @@ class FillEvent(Event):
         symbol,
         exchange,
         quantity,
-        direction,
         fill_cost,
         commission=None,
     ):
@@ -104,10 +107,9 @@ class FillEvent(Event):
         timeindex - The bar-resolution when the order was filled.
         symbol - The instrument which was filled.
         exchange - The exchange where the order was filled.
-        quantity - The filled quantity.
-        direction - The direction of fill ('BUY' or 'SELL')
+        quantity - The filled quantity (negative for sell)
         fill_cost - The holdings value in dollars.
-        commission - An optional commission sent from IB.
+        commission - An optional commission.
         """
 
         self.type = "FILL"
@@ -115,7 +117,6 @@ class FillEvent(Event):
         self.symbol = symbol
         self.exchange = exchange
         self.quantity = quantity
-        self.direction = direction
         self.fill_cost = fill_cost
 
         # Calculate commission

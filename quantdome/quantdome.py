@@ -20,20 +20,29 @@ def Quantdome():
         self.events = queue.Queue()
         self.portfolio = NaivePortfolio(self.bars, self.events, start_date)
         self.broker = SimulatedExecutionHandler(self.events)
-        self.bars = HistoricalDBDataHandler(self.events, self.tickers, start_date, end_date, self.interval)
         self.strategy = None
+        self.data = None
+
+    def set_data_csv(self, csv_dir):
+        self.data = HistoricCSVDataHandler(self.events, csv_dir, self.tickers)
 
     def add_strategy(self, strategy):
         self.strategy = strategy
+
+    def set_portfolio(self, portfolio):
+        self.portfolio = portfolio
 
     def run(self):
 
         if not self.strategy:
             raise TypeError("Strategy not defined. You must call Quantdome.add_strategy() prior to run()")
+        if not self.data:
+            raise TypeError("Data source not defined.")
+        
         # Loop over each bar
         while True:
-            if self.bars.continue_backtest == True:
-                self.bars.update_bars()
+            if self.data.continue_backtest == True:
+                self.data.update_bars()
             else:
                 break
 
@@ -46,17 +55,18 @@ def Quantdome():
                 else:
                     if event is not None:
                         if event.type == 'MARKET':
-                            self.strategy.calculate_signals(event)
-                            self.portfolio.update_timeindex(event)
+                            self.strategy.calculate_signals(event.data)
+                            self.portfolio.update_timeindex(event.data)
 
                         elif event.type == 'SIGNAL':
-                            self.portfolio.update_signal(event)
+                            self.portfolio.process_signal(event)
 
                         elif event.type == 'ORDER':
                             self.broker.execute_order(event)
 
                         elif event.type == 'FILL':
                             self.portfolio.update_fill(event)
+
 
     def get_results(self):
         # Retrieve backtest results 

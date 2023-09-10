@@ -52,7 +52,7 @@ class HistoricCSVDataHandler(DataHandler):
 
     def __init__(self, events, csv_dir, symbol_list):
         """
-        Initialises the historic data handler by requesting
+        Initializes the historic data handler by requesting
         the location of the CSV files and a list of symbols.
 
         It will be assumed that all files are of the form
@@ -120,7 +120,7 @@ class HistoricCSVDataHandler(DataHandler):
     def _get_new_bar(self, symbol):
         """
         Returns the latest bar from the data feed as a tuple of 
-        (sybmbol, datetime, open, low, high, close, volume).
+        (symbol, datetime, open, low, high, close, volume).
         """
         for b in self.symbol_data[symbol]:
             yield tuple([symbol, datetime.datetime.strptime(str(b[0]), '%Y-%m-%d %H:%M:%S'), 
@@ -143,6 +143,8 @@ class HistoricCSVDataHandler(DataHandler):
         Pushes the latest bar to the latest_symbol_data structure
         for all symbols in the symbol list.
         """
+        event = MarketEvent()
+
         for s in self.symbol_list:
             try:
                 bar = next(self._get_new_bar(s))
@@ -151,7 +153,8 @@ class HistoricCSVDataHandler(DataHandler):
             else:
                 if bar is not None:
                     self.latest_symbol_data[s].append(bar)
-        self.events.put(MarketEvent())
+                    event.add_ticker(*bar)
+        self.events.put(event)
 
 
 class HistoricalDBDataHandler(DataHandler):

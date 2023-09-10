@@ -64,13 +64,10 @@ class NaivePortfolio(Portfolio):
         self.events = events
         self.symbol_list = self.bars.symbol_list
         self.start_date = start_date
-        self.initial_capital = initial_capital
+        self.capital = initial_capital
         
         self.all_positions = self.construct_all_positions()
-        self.current_positions = dict( (k,v) for k, v in [(s, 0) for s in self.symbol_list] )
-
         self.all_holdings = self.construct_all_holdings()
-        self.current_holdings = self.construct_current_holdings()
 
     def construct_all_positions(self):
         """
@@ -78,8 +75,7 @@ class NaivePortfolio(Portfolio):
         to determine when the time index will begin.
         """
         d = dict( (k,v) for k, v in [(s, 0) for s in self.symbol_list] )
-        d['datetime'] = self.start_date
-        return [d]
+        return d
 
 
     def construct_all_holdings(self):
@@ -88,60 +84,14 @@ class NaivePortfolio(Portfolio):
         to determine when the time index will begin.
         """
         d = dict( (k,v) for k, v in [(s, 0.0) for s in self.symbol_list] )
-        d['datetime'] = self.start_date
-        d['cash'] = self.initial_capital
-        d['commission'] = 0.0
-        d['total'] = self.initial_capital
-        return [d]
-    
-    def construct_current_holdings(self):
-        """
-        This constructs the dictionary which will hold the instantaneous
-        value of the portfolio across all symbols.
-        """
-        d = dict( (k,v) for k, v in [(s, 0.0) for s in self.symbol_list] )
-        d['cash'] = self.initial_capital
-        d['commission'] = 0.0
-        d['total'] = self.initial_capital
         return d
+    
 
-    def update_timeindex(self, event):
-        """
-        Adds a new record to the positions matrix for the current 
-        market data bar. This reflects the PREVIOUS bar, i.e. all
-        current market data at this stage is known (OLHCVI).
-
-        Makes use of a MarketEvent from the events queue.
-        """
-        bars = {}
-        for sym in self.symbol_list:
-            bars[sym] = self.bars.get_latest_bars(sym, N=1)
-
-        # Update positions
-        dp = dict( (k,v) for k, v in [(s, 0) for s in self.symbol_list] )
-        dp['datetime'] = bars[self.symbol_list[0]][0][1]
-
-        for s in self.symbol_list:
-            dp[s] = self.current_positions[s]
-
-        # Append the current positions
-        self.all_positions.append(dp)
+    def process_market_update(self, bars):
 
         # Update holdings
-        dh = dict( (k,v) for k, v in [(s, 0) for s in self.symbol_list] )
-        dh['datetime'] = bars[self.symbol_list[0]][0][1]
-        dh['cash'] = self.current_holdings['cash']
-        dh['commission'] = self.current_holdings['commission']
-        dh['total'] = self.current_holdings['cash']
-
-        for s in self.symbol_list:
-            # Approximation to the real value
-            market_value = self.current_positions[s] * bars[s][0][5]
-            dh[s] = market_value
-            dh['total'] += market_value
-
-        # Append the current holdings
-        self.all_holdings.append(dh)
+        for sym in self.symbol_list:
+            self.all_holdings[sym] = bars[sym]["close"] * self.all_positions[sym]
 
     def update_positions_from_fill(self, fill):
         """
@@ -151,15 +101,8 @@ class NaivePortfolio(Portfolio):
         Parameters:
         fill - The FillEvent object to update the positions with.
         """
-        # Check whether the fill is a buy or sell
-        fill_dir = 0
-        if fill.direction == 'BUY':
-            fill_dir = 1
-        if fill.direction == 'SELL':
-            fill_dir = -1
-
-        # Update positions list with new quantities
-        self.current_positions[fill.symbol] += fill_dir*fill.quantity
+        
+        self.all_positions[fill.symbol] += fill.quantity
 
 #TODO: Update fill price simulation
     def update_holdings_from_fill(self, fill):
@@ -170,20 +113,11 @@ class NaivePortfolio(Portfolio):
         Parameters:
         fill - The FillEvent object to update the holdings with.
         """
-        # Check whether the fill is a buy or sell
-        fill_dir = 0
-        if fill.direction == 'BUY':
-            fill_dir = 1
-        if fill.direction == 'SELL':
-            fill_dir = -1
+        if fill.quantity > 0:
+            self.capital -= (fill.fill_cost + fill.commision)
 
-        # Update holdings list with new quantities
-        fill_cost = self.bars.get_latest_bars(fill.symbol)[0][5]  # Close price
-        cost = fill_dir * fill_cost * fill.quantity
-        self.current_holdings[fill.symbol] += cost
-        self.current_holdings['commission'] += fill.commission
-        self.current_holdings['cash'] -= (cost + fill.commission)
-        self.current_holdings['total'] -= (cost + fill.commission)
+        elif fill.quantity < 0:
+            self.capital += (fill.fill_cost + fill.commision)
 
     def update_fill(self, event):
         """
@@ -196,35 +130,17 @@ class NaivePortfolio(Portfolio):
 
     def generate_naive_order(self, signal):
         """
-        Simply transacts an OrderEvent object as a constant quantity
-        sizing of the signal object, without risk management or
-        position sizing considerations.
+        Generate new order from signal
+        Any risk, management logic should go here
 
         Parameters:
         signal - The SignalEvent signal information.
         """
-        order = None
 
-        symbol = signal.symbol
-        direction = signal.signal_type
-        strength = signal.strength
-
-        mkt_quantity = floor(100 * strength)
-        cur_quantity = self.current_positions[symbol]
-        order_type = 'MKT'
-
-        if direction == 'LONG' and cur_quantity == 0:
-            order = OrderEvent(symbol, order_type, mkt_quantity, 'BUY')
-        if direction == 'SHORT' and cur_quantity == 0:
-            order = OrderEvent(symbol, order_type, mkt_quantity, 'SELL')   
+        return OrderEvent(signal.symbol, signal.price, signal.quantity)
+        
     
-        if direction == 'EXIT' and cur_quantity > 0:
-            order = OrderEvent(symbol, order_type, abs(cur_quantity), 'SELL')
-        if direction == 'EXIT' and cur_quantity < 0:
-            order = OrderEvent(symbol, order_type, abs(cur_quantity), 'BUY')
-        return order
-    
-    def update_signal(self, event):
+    def process_signal(self, event):
         """
         Acts on a SignalEvent to generate new orders 
         based on the portfolio logic.
@@ -232,6 +148,8 @@ class NaivePortfolio(Portfolio):
         if event.type == 'SIGNAL':
             order_event = self.generate_naive_order(event)
             self.events.put(order_event)
+
+    ## data logging functions
 
     def create_equity_curve_dataframe(self):
         """
