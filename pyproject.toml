@@ -15,6 +15,7 @@ matplotlib = "^3.7.2"
 python-decouple = "^3.8"
 pyscopg2 = "^66.0.2"
 psycopg2 = "^2.9.6"
+kafka-python = "^2.0.2"
 
 
 [tool.poetry.group.test.dependencies]
