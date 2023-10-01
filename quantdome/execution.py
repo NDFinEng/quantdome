@@ -45,7 +45,7 @@ class SimulatedExecutionHandler(ExecutionHandler):
     handler.
     """
     
-    def __init__(self, events):
+    def __init__(self, events, slippage=0.0, market_impact=0.0):
         """
         Initialises the handler, setting the event queues
         up internally.
@@ -54,6 +54,8 @@ class SimulatedExecutionHandler(ExecutionHandler):
         events - The Queue of Event objects.
         """
         self.events = events
+        self.slippage = slippage
+        self.market_impact = market_impact
 
     def execute_order(self, event):
         """
@@ -64,6 +66,23 @@ class SimulatedExecutionHandler(ExecutionHandler):
         event - Contains an Event object with order information.
         """
         if event.type == 'ORDER':
+            # Get the market data for the symbol and date
+            market_data = event.symbol
+
+            # Calculate the execution price with slippage and market impact
+            execution_price = event.price
+            market_open_price = market_data['open']
+            market_close_price = market_data['close']
+            
+            # Apply slippage
+            execution_price += (execution_price * self.slippage)
+            
+            # Calculate market impact as a percentage change from open to close
+            market_impact_percentage = ((execution_price - market_open_price) / market_open_price) * 100
+            
+            # Apply market impact
+            execution_price += (market_impact_percentage / 100) * execution_price
+            
             fill_event = FillEvent(datetime.datetime.now(), event.symbol,
-                                   'Backtest', event.quantity, event.price)
+                                   'Backtest', event.quantity, execution_price)
             self.events.put(fill_event)
