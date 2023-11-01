@@ -116,3 +116,14 @@ def receive_signal():
                             quantity,
                             direction
                         )
+
+                # Manual commit
+                CONSUMER.commit(asynchronous=False)
+            
+
+# Main
+if __name__ == "__main__":
+    save_pid(SCRIPT)
+
+    # start consumer
+    receive_signal()
