@@ -62,3 +62,49 @@ PERSISTENT_QUERIES = {
         STREAM_TRADE_FILL,
     ]
 }
+
+KSQL_STATEMENTS = {
+    STREAM_MARKET_UPDATE: f"""CREATE STREAM IF NOT EXISTS {STREAM_MARKET_UPDATE} (
+        
+    )
+    """
+}
+
+if __name__ == "__main__":
+    # Create topics
+    num_partitions = int(SYS_CONFIG["kafka-topic-config"]["num_partitions"])
+    replication_factor = int(SYS_CONFIG["kafka-topic-config"]["replication_factor"])
+    for alias, topic in SYS_CONFIG["kafka-topics"].items():
+        logging.info(
+            f"Creating topic {alias} as '{topic}' with {num_partitions} partition(s) and replication factor {replication_factor}..."
+        )
+        try:
+            partitions = get_topic_partitions(
+                ADMIN_CLIENT,
+                topic,
+                default_partition_number=0,
+            )
+            if partitions == 0:
+                result = (
+                    ADMIN_CLIENT.create_topics(
+                        [
+                            NewTopic(
+                                topic,
+                                num_partitions,
+                                replication_factor,
+                            ),
+                        ]
+                    )
+                    .get(topic)
+                    .result()
+                )
+            else:
+                logging.info("Topic already exists!")
+                continue
+        except Exception:
+            log_exception(
+                f"Error when creating topic!",
+                sys.exc_info(),
+            )
+        else:
+            logging.info("Done!")

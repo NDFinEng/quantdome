@@ -82,33 +82,6 @@ def get_system_config(
         sys_config = dict()
         for s in config_parser.sections():
             sys_config[s] = dict(config_parser[s])
-        for s in ("sauce", "cheese", "main_topping", "extra_toppings"):
-            sys_config["pizza"][s] = parse_list(sys_config["pizza"][s])
-
-        # Parse order status
-        sys_config["status"] = {
-            None: sys_config["status-label"]["else"],
-        }
-        for k, v in sys_config["status-id"].items():
-            sys_config["status-id"][k] = int(v)
-            sys_config["status"][int(v)] = sys_config["status-label"].get(k, "???")
-
-        # Parse status parameters
-        status_completed_when = parse_list(
-            sys_config["state-store-orders"]["status_completed_when"]
-        )
-        sys_config["state-store-orders"]["status_completed_when"] = list()
-        for status in status_completed_when:
-            sys_config["state-store-orders"]["status_completed_when"].append(
-                int(sys_config["status-id"][status])
-            )
-
-        sys_config["state-store-orders"]["status_watchdog_minutes"] = float(
-            sys_config["state-store-orders"]["status_watchdog_minutes"]
-        )
-        sys_config["state-store-orders"]["status_invalid_timeout_minutes"] = float(
-            sys_config["state-store-orders"]["status_invalid_timeout_minutes"]
-        )
 
         # Filter by section (if required)
         if section is not None:
