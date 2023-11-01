@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 from .portfolio import *
 from .execution import *
-from .data      import *
+#from .data      import *
 
 def Quantdome():
 
