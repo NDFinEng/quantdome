@@ -101,10 +101,12 @@ def log_ini(
     script: str,
     level: int = logging.INFO,
     to_disk: bool = True,
+    to_stdout: bool = True,
 ):
-    handlers = [
-        logging.StreamHandler(),
-    ]
+    handlers = []
+    if to_stdout:
+        handlers.append(logging.StreamHandler())
+        
     if to_disk:
         handlers.append(
             TimedRotatingFileHandler(
@@ -115,7 +117,7 @@ def log_ini(
         )
 
     logging.basicConfig(
-        format=f"\n\x00%(asctime)s.%(msecs)03d [%(levelname)s] {script}: %(message)s",
+        format=f"\n%(asctime)s.%(msecs)03d [%(levelname)s] {script}: %(message)s",
         level=level,
         datefmt="%Y-%m-%d %H:%M:%S",
         handlers=handlers,

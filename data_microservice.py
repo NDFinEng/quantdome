@@ -26,39 +26,41 @@ from utils import (
     set_producer_consumer,
 )
 
-def main():
-    # Basic checking for valid input
-    if len(sys.argv[1:]) != 1:
-        print("Incorrect Usage in data_microservice. Usage; python3 data_microservice <path/to/csv>")
-        exit(1)
-    if not os.path.isfile(sys.argv[1]):
-        print("Not a valid file")
-        exit(1)
-    
-    SCRIPT = get_script_name(__file__)
-    HOSTNAME = get_hostname()
-    log_ini(SCRIPT)
-    # Get kafka and sys config files 
-    kafka_config_file, sys_config_file = validate_cli_args(SCRIPT)
-    global PRODUCER
-    _, PRODUCER, CONSUMER, _ = set_producer_consumer(
+####################
+# Global variables #
+####################
+SCRIPT = get_script_name(__file__)
+HOSTNAME = get_hostname()
+
+log_ini(SCRIPT)
+
+kafka_config_file, sys_config_file = validate_cli_args(SCRIPT)
+
+SYS_CONFIG = get_system_config(sys_config_file)
+
+PRODUCE_TOPIC_MARKET_UPDATE = SYS_CONFIG["kafka-topics"]["market_update"]
+
+_, PRODUCER, _, _ = set_producer_consumer(
         kafka_config_file,
         producer_extra_config={
             "on_delivery": delivery_report,
-            "client.id": f"""{SYS_CONFIG["kafka-client-id"]["microservice_assembled"]}_{HOSTNAME}""",
+            "client.id": f"""{SYS_CONFIG["kafka-client-id"]["microservice_update"]}_{HOSTNAME}""",
         },
-        #consumer_extra_config={
-        #    "group.id": f"""{SYS_CONFIG["kafka-consumer-group-id"]["microservice_assembled"]}_{HOSTNAME}""",
-        #    "client.id": f"""{SYS_CONFIG["kafka-client-id"]["microservice_assembled"]}_{HOSTNAME}""",
-        #},
-    )
-    global SYS_CONFIG
-    SYS_CONFIG = get_system_config(sys_config_file)
-    global PRODUCE_TOPIC_MARKET_UPDATE
-    PRODUCE_TOPIC_MARKET_UPDATE = SYS_CONFIG["kafka-topics"]["market_update"]
+        disable_consumer = True
+)
+
+def main():
+    # Basic checking for valid input
+    if len(sys.argv[1:]) < 3:
+        print("Incorrect Usage in data_microservice. Usage; python3 data_microservice <path/to/csv>")
+        exit(1)
+    if not os.path.isfile(sys.argv[-1]):
+        print("Not a valid file")
+        exit(1)
+    
 
     # Call the actual DataHandler
-    Handler = DataHandler(sys.argv[1])
+    Handler = DataHandler(sys.argv[-1],[])
     return(Handler.produce())
 
     #GRACEFUL_SHUTDOWN = GracefulShutdown(consumer=CONSUMER) #Might need this later
@@ -77,31 +79,33 @@ class DataHandler:
 
 
     def _produce(self):
-        for line in self.read_csv(self.csv_file):
-            try:
-                Date, Open, High, Low, Close, AdjClose, Volume = line
-                hashed_line = set(line)
-            except Exception as e:
-                print("Exception encountered", e)
-                continue
-            PRODUCER.produce(
-                PRODUCE_TOPIC_MARKET_UPDATE,
-                key=hash(hashed_line),
-                value=json.dumps(
-                    {
-                        "Date": Date,
-                        "Open": Open,
-                        "High": High,
-                        "Low": Low,
-                        "Close": Close,
-                        "Adj Close": AdjClose,
-                        "Volume": Volume,
-                        "Timestamp": timestamp_now(),
-                    }
-                ).encode(),
-            )
-            PRODUCER.flush()
-        return self.read_csv(self.csv_file) # TODO Change Later, just for basic unit tests now
+        with open(self.csv_file, 'r') as file:
+            reader = csv.reader(file)
+            # skip header row
+            next(reader,None)
+            for line in reader:
+                try:
+                    Date, Open, High, Low, Close, AdjClose, Volume = line
+                except Exception as e:
+                    print("Exception encountered", e)
+                    return
+                PRODUCER.produce(
+                    PRODUCE_TOPIC_MARKET_UPDATE,
+                    value=json.dumps(
+                        {
+                            "Date": Date,
+                            "Open": Open,
+                            "High": High,
+                            "Low": Low,
+                            "Close": Close,
+                            "Adj Close": AdjClose,
+                            "Volume": Volume,
+                            "Timestamp": timestamp_now(),
+                        }
+                    ).encode(),
+                )
+                PRODUCER.flush()
+        #return self.read_csv(self.csv_file) # TODO Change Later, just for basic unit tests now
 
     
 
