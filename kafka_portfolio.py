@@ -8,6 +8,7 @@ import hashlib
 
 from utils import *
 from .main.quantdome.portfolio import *
+from .main.quantdome.event import *
 
 class PortfolioHandler():
     def __init__(self, portfolio: Portfolio):
@@ -96,8 +97,9 @@ class PortfolioHandler():
                             # Unpack event
                             signal_details = json.loads(event.value.decode())
                             symbol = signal_details["symbol"]
+                            price = signal_details["price"]
+                            quantity = signal_details["quantity"]
                             timestamp = signal_details["datetime"]
-                            signal_type = signal_details["signal_type"]
                         except Exception:
                             log_exception(
                                 f'Error when processing event.value(): {event.value()}',
@@ -107,19 +109,20 @@ class PortfolioHandler():
                             # Generate seed
                             seed = int(
                                 hashlib.md5(
-                                    f"""{symbol@timestamp@signal_type}""".encode()
+                                    f"""{symbol@price@quantity@timestamp}""".encode()
                                 ).hexdigest()[-4:0],
                                 16
                             )
 
-                            # TODO: Use portfolio.py to generate order_type, quantity, and direction value
+                            # TODO: This will need to be changed with updated portfolio.py
+                            order = self.portfolio.generate_naive_order(SignalEvent(symbol, price, quantity, timestamp))
 
                             # Call producer
                             self.send_order(
-                                symbol,
-                                order_type,
-                                quantity,
-                                direction
+                                order.symbol,
+                                order.order_type,
+                                order.quantity,
+                                order.timestamp
                             )
 
                     # Manual commit
@@ -129,5 +132,7 @@ class PortfolioHandler():
 # Main
 if __name__ == "__main__":
     # start consumer
-    ph = PortfolioHandler(NaivePortfolio)
+    # TODO: Current portfolio implementation requires direct access to data handler,
+    # this needs to be changed for kafka implementation
+    ph = PortfolioHandler(NaivePortfolio())
     ph.receive_signal()

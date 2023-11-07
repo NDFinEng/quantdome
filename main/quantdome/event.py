@@ -41,7 +41,7 @@ class SignalEvent(Event):
     This is received by a Portfolio object and acted upon.
     """
 
-    def __init__(self, symbol, price, quantity):
+    def __init__(self, symbol, price, quantity, timestamp=datetime.datetime.now()):
         """
         SignalEvent Constructor
         symbol - ticker to trade
@@ -53,7 +53,7 @@ class SignalEvent(Event):
         self.symbol = symbol
         self.price = price
         self.quantity = quantity
-        self.datetime = datetime.datetime.now()
+        self.datetime = timestamp
 
 
 class OrderEvent(Event):
@@ -63,7 +63,7 @@ class OrderEvent(Event):
     quantity and a direction.
     """
 
-    def __init__(self, symbol, price, quantity):
+    def __init__(self, symbol, order_type, quantity, timestamp=datetime.datetime.now()):
         """
         OrderEvent Constructor
 
@@ -76,9 +76,9 @@ class OrderEvent(Event):
 
         self.type = "ORDER"
         self.symbol = symbol
-        self.price = price
+        self.order_type = order_type
         self.quantity = quantity
-        self.datetime = datetime.datetime.now()
+        self.datetime = timestamp
 
 
 class FillEvent(Event):

@@ -137,7 +137,7 @@ class NaivePortfolio(Portfolio):
         signal - The SignalEvent signal information.
         """
 
-        return OrderEvent(signal.symbol, signal.price, signal.quantity)
+        return OrderEvent(signal.symbol, 'MKT', 100, signal.quantity)
         
     
     def process_signal(self, event):
