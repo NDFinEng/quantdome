@@ -1,8 +1,6 @@
 """
 Usage: python3 data_microservice <path/to/csv>
 """
-
-
 import sys
 import json
 import time
