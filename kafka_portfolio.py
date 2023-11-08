@@ -31,7 +31,7 @@ class PortfolioHandler():
         self.PRODUCE_TOPIC_ORDER = self.SYS_CONFIG["kafka-topics"]["trade-order"]
         self.CONSUME_TOPICS = [
             self.SYS_CONFIG["kafka-topics"]["trade-signal"],
-            #SYS_CONFIG["kafka-topics"]["fill-order"]
+            #self.SYS_CONFIG["kafka-topics"]["fill-order"]
         ]
 
         # TODO: Create second consumer to listen to fill orders 
@@ -51,27 +51,27 @@ class PortfolioHandler():
         # Set signal handler
         self.GRACEFUL_SHUTDOWN = GracefulShutdown(consumer=self.CONSUMER)
 
-        def send_order(
-            self,
-            symbol: str,
-            order_type: str,
-            quantity: int,
-            direction: str
-        ):
-            # Produce Order Event with arguments
-            self.PRODUCER.produce(
-                self.PRODUCE_TOPIC_ORDER,
-                value=json.dumps(
-                    {
-                        "symbol": symbol,
-                        "order_type": order_type,
-                        "quantity": quantity,
-                        "direction": direction
-                    }
-                ).encode()
-            )
-            # Send Order Event
-            self.PRODUCER.flush()
+    def send_order(
+        self,
+        symbol: str,
+        order_type: str,
+        quantity: int,
+        direction: str
+    ):
+        # Produce Order Event with arguments
+        self.PRODUCER.produce(
+            self.PRODUCE_TOPIC_ORDER,
+            value=json.dumps(
+                {
+                    "symbol": symbol,
+                    "order_type": order_type,
+                    "quantity": quantity,
+                    "direction": direction
+                }
+            ).encode()
+        )
+        # Send Order Event
+        self.PRODUCER.flush()
 
     def receive_signal(self):
         self.CONSUMER.subscribe(self.CONSUME_TOPICS)
