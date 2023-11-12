@@ -105,3 +105,21 @@ services:
       - ksqldb-server
     entrypoint: /bin/sh
     tty: true
+
+  db:
+    image: mysql
+    container_name: quantdome-db
+    restart: always
+    environment:
+      MYSQL_DATABASE: 'quantdome_db'
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./quantdome-db:/var/lib/mysql
+
+volumes:
+  quantdome-db:
+

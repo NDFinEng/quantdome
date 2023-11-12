@@ -9,6 +9,8 @@ import logging
 import os
 import csv
 
+from datetime import datetime
+
 from utils import (
     GracefulShutdown,
     log_ini,
@@ -23,6 +25,8 @@ from utils import (
     log_event_received,
     set_producer_consumer,
 )
+
+from utils.events import MarketUpdate
 
 ####################
 # Global variables #
@@ -87,20 +91,23 @@ class DataHandler:
                 except Exception as e:
                     print("Exception encountered", e)
                     return
+
+                # Produce to Kafka
+                market_update = MarketUpdate(
+                    timestamp=int(datetime.strptime(Date, "%m/%d/%Y").timestamp()),
+                    symbol="GOOG",
+                    high=float(High),
+                    low=float(Low),
+                    open=float(Open),
+                    close=float(Close),
+                    volume=int(Volume),
+                )
+
+                market_update_json = json.dumps(market_update.__dict__)
+
                 PRODUCER.produce(
                     PRODUCE_TOPIC_MARKET_UPDATE,
-                    value=json.dumps(
-                        {
-                            "Date": Date,
-                            "Open": Open,
-                            "High": High,
-                            "Low": Low,
-                            "Close": Close,
-                            "Adj Close": AdjClose,
-                            "Volume": Volume,
-                            "Timestamp": timestamp_now(),
-                        }
-                    ).encode(),
+                    value=market_update_json.encode('utf-8')
                 )
                 PRODUCER.flush()
         #return self.read_csv(self.csv_file) # TODO Change Later, just for basic unit tests now

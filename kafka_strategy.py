@@ -4,6 +4,7 @@ import time
 import logging
 
 from utils import *
+from utils.events import *
 
 from strategies.simple_strat import SimpleStrat
 
@@ -49,23 +50,16 @@ class StrategyHandler():
         # Strategy that is being implemented
         self.strategy = strategy
 
-    def produce(self, signals):
-        # take in trade signals ==> send to kafka
+    def produce(self, signals: List[TradeSignal]):
 
-        # Producing Trade Signals
-        # Produce to kafka topic
-        PRODUCER.produce(
-            PRODUCE_TOPIC_TRADE_SIGNAL,
-            # KEY?
-            key=signals,
-            value=json.dumps(
-                {
-                    "trading-signal": signals,
-                    "timestamp": timestamp_now(),
-                }
-            ).encode(),
-        )
-        PRODUCER.flush()
+        for signals in signals:
+
+            signal_json = json.dumps(signals.__dict__).encode()
+            producer.produce(
+                topic=PRODUCE_TOPIC_TRADE_SIGNAL,
+                value=signal_json.encode('utf-8')
+            )
+            PRODUCER.flush()
 
 
     def consume(self):
@@ -90,11 +84,10 @@ class StrategyHandler():
                             
                         try:
                             # Market Update
-                            update = json.loads(m_update_event.value().decode())
+                            update = MarketUpdate(**json.loads(m_update_event.value().decode('utf-8')))
 
                             # Generate Signal Based on Strategy
-                            # STRATEGY.PY ==> generates signals
-                            signals = self.strategy.calculate_signals(update=update)
+                            signals = self.strategy.calculate_signals(update)
                             
                             # Produce the Generated Trade Signal
                             self.produce(signals)

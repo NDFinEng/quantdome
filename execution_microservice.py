@@ -21,6 +21,8 @@ from utils import (
     set_producer_consumer,
 )
 
+from utils.events import TradeOrder, TradeFill
+
 ####################
 # Global variables #
 ####################
@@ -58,19 +60,22 @@ GRACEFUL_SHUTDOWN = GracefulShutdown(consumer=CONSUMER)
 
 class ExecutionHandler():
 
-    def produce(self, orders):
-        # take in order fills ==> send to kafka
+    def produce(self, order: TradeOrder):
 
-        PRODUCER.produce(
-            PRODUCE_TOPIC_TRADE_FILL,
-            # KEY?
-            key="",
-            value=json.dumps(
-                {
-                    "trading-signal": signals,
-                    "timestamp": timestamp_now(),
-                }
-            ).encode(),
+        # take in order fills ==> send to kafka
+        trade_fill = TradeFill(
+            timestamp=order.timestamp,
+            symbol=order.symbol,
+            price=order.price,
+            quantity=order.quantity,
+            order_id=order.order_id,
+            portfolio=''
+        )
+
+        fill_json = json.dumps(trade_fill.__dict__)
+        PRODUCE.produce(
+            topic=PRODUCE_TOPIC_TRADE_FILL,
+            value=fill_json.encode('utf-8')
         )
         PRODUCER.flush()
 
@@ -91,10 +96,9 @@ class ExecutionHandler():
                         log_event_received(m_order_event)
 
                         try:
-                            order = json.loads(m_order_event.value.decode())
+                            trade_order = TradeOrder(**json.loads(m_order_event.value()))
 
-                            fills = order
-                            self.produce(signals)
+                            self.produce(trade_order)
 
                         except Exception:
                             log_exception(

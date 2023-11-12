@@ -6,3 +6,4 @@ env/
 logs/
 dist/
 poetry.lock
+quantdome-db

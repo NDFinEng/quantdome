@@ -24,10 +24,14 @@ import datetime
 import requests
 import importlib
 
+from dotenv import load_dotenv
 from configparser import ConfigParser
 from confluent_kafka import Producer, Consumer
 from logging.handlers import TimedRotatingFileHandler
 from confluent_kafka.admin import AdminClient
+
+# load .env file
+load_dotenv('.env')
 
 
 ####################
@@ -78,6 +82,20 @@ def get_system_config(
         config_parser = ConfigParser(interpolation=None)
         config_parser.read_file(open(sys_config_file, "r"))
 
+                # Replace environement variables
+        try:
+            mysql_user = os.environ.get('MYSQL_USER')
+            mysql_password = os.environ.get('MYSQL_PASSWORD')
+
+            config_parser.set('mysql-config', 'user', mysql_user)
+            config_parser.set('mysql-config', 'password', mysql_password)
+        except Exception:
+            log_exception(
+                f"Unable to replace environment variables in system configuration file: {sys_config_file}\n",
+                sys.exc_info(),
+            )
+            sys.exit(1)
+
         # Parse sections
         sys_config = dict()
         for s in config_parser.sections():
@@ -92,7 +110,7 @@ def get_system_config(
             f"Unable to parse system configuration file: {sys_config_file}\n",
             sys.exc_info(),
         )
-        sys.exit(0)
+        sys.exit(1)
 
     return sys_config
 
@@ -299,8 +317,8 @@ def delivery_report(err, msg):
         )
 
 
-def timestamp_now() -> int:
-    return int(datetime.datetime.now().timestamp() * 1000)
+def timestamp_now():
+    return datetime.datetime.now()
 
 
 def http_request(
