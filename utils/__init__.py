@@ -318,7 +318,9 @@ def delivery_report(err, msg):
 
 
 def timestamp_now():
-    return datetime.datetime.now()
+    current_time = datetime.datetime.now()
+    rounded_time = current_time + datetime.timedelta(seconds=1) - datetime.timedelta(microseconds=current_time.microsecond)
+    return rounded_time
 
 
 def http_request(

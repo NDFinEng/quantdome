@@ -1,4 +1,5 @@
 import mysql.connector
+from mysql.connector.errors import IntegrityError
 from datetime import datetime
 
 from utils import timestamp_now
@@ -53,29 +54,33 @@ class MysqlHandler():
 
     def insert_equities_historical(self, data: MarketUpdate):
         """Add historical data for a symbol"""
-        self.execute(
-            f"""INSERT INTO {self.sys_config["mysql-config"]["table_equities_historical"]} (
-                timestamp,
-                symbol,
-                high,
-                low,
-                open,
-                close,
-                volume
+
+        try:
+            self.execute(
+                f"""INSERT INTO {self.sys_config["mysql-config"]["table_equities_historical"]} (
+                    timestamp,
+                    symbol,
+                    high,
+                    low,
+                    open,
+                    close,
+                    volume
+                )
+                VALUES
+                (%s, %s, %s, %s, %s, %s, %s)""",
+                parameters=[
+                    data.timestamp,
+                    data.symbol,
+                    data.high,
+                    data.low,
+                    data.open,
+                    data.close,
+                    data.volume,
+                ],
+                commit=True
             )
-            VALUES
-            (%s, %s, %s, %s, %s, %s, %s)""",
-            parameters=[
-                data.timestamp,
-                data.symbol,
-                data.high,
-                data.low,
-                data.open,
-                data.close,
-                data.volume,
-            ],
-            commit=True
-        )
+        except IntegrityError:
+            print(f"Duplicate entry for {data.symbol} at {data.timestamp}")
 
     def insert_portfolio_state(self, data: PortfolioState):
         """Add portfolio state to log"""
@@ -103,7 +108,7 @@ class MysqlHandler():
     def insert_trade_signal(self, data: TradeSignal):
         """Add trade signal to log"""
         self.execute(
-            f"""INSERT INTO {self.sys_config["mysql-config"]["table_trade_signal"]} (
+            f"""INSERT INTO {self.sys_config["mysql-config"]["table_trade_signals"]} (
                 timestamp,
                 symbol,
                 price,
@@ -119,3 +124,13 @@ class MysqlHandler():
             ],
             commit=True
         )
+
+    def get_equities_historical(self, ticker: str):
+        """Get historical data for a symbol"""
+
+        self.execute(
+            f"""SELECT * FROM {self.sys_config["mysql-config"]["table_equities_historical"]} WHERE symbol = %s""",
+            parameters=[ticker]
+        )
+
+        return self.cursor.fetchall()

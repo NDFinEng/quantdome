@@ -61,7 +61,7 @@ def test_db_insert_equities_historical():
                 AND timestamp=%s""", 
             (
                 market_update.symbol, 
-                market_update.timestamp.strftime('%Y-%m-%d %H:%M:%S')
+                market_update.timestamp
             )
         )
         result = db.cursor.fetchone()
@@ -73,8 +73,6 @@ def test_db_insert_equities_historical():
         assert result[4] == 75
         assert result[5] == 75
         assert result[6] == 1000
-
-
 
         # delete inserted row
         db.cursor.execute(
@@ -90,11 +88,107 @@ def test_db_insert_equities_historical():
 
         print("Mysql DB Insert Equities Historical Test Passed!")
 
+def test_db_insert_portfolio_state():
+
+    with MysqlHandler('quantdome_db', SYS_CONFIG) as db:
+        # create portfolio state object
+        portfolio_state = PortfolioState(
+            timestamp=timestamp_now(),
+            symbol='AAPL',
+            value=100,
+            quantity=10,
+            portfolio='test'
+        )
+
+        # insert portfolio state
+        db.insert_portfolio_state(portfolio_state)
+
+        # check if inserted
+        db.cursor.execute(
+            f"""SELECT * FROM portfolio_state 
+                WHERE symbol=%s 
+                AND timestamp=%s""", 
+            (
+                portfolio_state.symbol, 
+                portfolio_state.timestamp
+            )
+        )
+        result = db.cursor.fetchone()
+
+        assert result is not None
+        assert result[1] == 'AAPL'
+        assert result[2] == 10
+        assert result[3] == 100
+        assert result[4] == 10 * 100
+        assert result[5] == 'test'
+
+
+
+        # delete inserted row
+        db.cursor.execute(
+            f"""DELETE FROM portfolio_state 
+                WHERE symbol=%s 
+                AND timestamp=%s""",
+            (
+                portfolio_state.symbol, 
+                portfolio_state.timestamp.strftime('%Y-%m-%d %H:%M:%S')
+            )
+        )
+        db.conn.commit()
+
+        print("Mysql DB Insert Portfolio State Test Passed!")
+
+def test_db_insert_trade_signal():
+
+    with MysqlHandler('quantdome_db', SYS_CONFIG) as db:
+        # create trade signal object
+        trade_signal = TradeSignal(
+            timestamp=timestamp_now(),
+            symbol='AAPL',
+            price=100,
+            quantity=10,
+        )
+
+        # insert trade signal
+        db.insert_trade_signal(trade_signal)
+
+        # check if inserted
+        db.cursor.execute(
+            f"""SELECT * FROM trade_signals
+                WHERE symbol=%s 
+                AND timestamp=%s""", 
+            (
+                trade_signal.symbol, 
+                trade_signal.timestamp
+            )
+        )
+        result = db.cursor.fetchone()
+
+        assert result is not None
+        assert result[1] == 'AAPL'
+        assert result[2] == 10
+        assert result[3] == 100
+
+        # delete inserted row
+        db.cursor.execute(
+            f"""DELETE FROM trade_signals
+                WHERE symbol=%s 
+                AND timestamp=%s""",
+            (
+                trade_signal.symbol, 
+                trade_signal.timestamp.strftime('%Y-%m-%d %H:%M:%S')
+            )
+        )
+        db.conn.commit()
+
+        print("Mysql DB Insert Trade Signal Test Passed!")
 
 def main():
     # run tests
     test_db_connection()
     test_db_insert_equities_historical()
+    test_db_insert_portfolio_state()
+    test_db_insert_trade_signal()
 
     print("Mysql DB Unit Tests Passed!")
 
