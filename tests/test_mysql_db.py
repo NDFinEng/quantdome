@@ -6,6 +6,7 @@ current_dir = os.path.dirname(__file__)
 parent_dir = os.path.dirname(current_dir)
 sys.path.append(parent_dir)
 
+from datetime import datetime
 from utils.db.mysql import MysqlHandler
 from utils import (
     get_script_name,
@@ -43,7 +44,7 @@ def test_db_insert_equities_historical():
         # create market update object
         market_update = MarketUpdate(
             symbol='AAPL',
-            timestamp=timestamp_now(),
+            timestamp=1696392000,
             high=100,
             low=50,
             open=75,
@@ -61,7 +62,7 @@ def test_db_insert_equities_historical():
                 AND timestamp=%s""", 
             (
                 market_update.symbol, 
-                market_update.timestamp
+                datetime.fromtimestamp(market_update.timestamp)
             )
         )
         result = db.cursor.fetchone()
@@ -81,7 +82,7 @@ def test_db_insert_equities_historical():
                 AND timestamp=%s""",
             (
                 market_update.symbol, 
-                market_update.timestamp.strftime('%Y-%m-%d %H:%M:%S')
+                datetime.fromtimestamp(market_update.timestamp)
             )
         )
         db.conn.commit()
@@ -93,7 +94,7 @@ def test_db_insert_portfolio_state():
     with MysqlHandler('quantdome_db', SYS_CONFIG) as db:
         # create portfolio state object
         portfolio_state = PortfolioState(
-            timestamp=timestamp_now(),
+            timestamp=1696392000,
             symbol='AAPL',
             value=100,
             quantity=10,
@@ -110,7 +111,7 @@ def test_db_insert_portfolio_state():
                 AND timestamp=%s""", 
             (
                 portfolio_state.symbol, 
-                portfolio_state.timestamp
+                datetime.fromtimestamp(portfolio_state.timestamp)
             )
         )
         result = db.cursor.fetchone()
@@ -131,7 +132,7 @@ def test_db_insert_portfolio_state():
                 AND timestamp=%s""",
             (
                 portfolio_state.symbol, 
-                portfolio_state.timestamp.strftime('%Y-%m-%d %H:%M:%S')
+                datetime.fromtimestamp(portfolio_state.timestamp)
             )
         )
         db.conn.commit()
@@ -143,7 +144,7 @@ def test_db_insert_trade_signal():
     with MysqlHandler('quantdome_db', SYS_CONFIG) as db:
         # create trade signal object
         trade_signal = TradeSignal(
-            timestamp=timestamp_now(),
+            timestamp=1696392000.0,
             symbol='AAPL',
             price=100,
             quantity=10,
@@ -159,7 +160,7 @@ def test_db_insert_trade_signal():
                 AND timestamp=%s""", 
             (
                 trade_signal.symbol, 
-                trade_signal.timestamp
+                datetime.fromtimestamp(trade_signal.timestamp)
             )
         )
         result = db.cursor.fetchone()
@@ -176,7 +177,7 @@ def test_db_insert_trade_signal():
                 AND timestamp=%s""",
             (
                 trade_signal.symbol, 
-                trade_signal.timestamp.strftime('%Y-%m-%d %H:%M:%S')
+                datetime.fromtimestamp(trade_signal.timestamp)
             )
         )
         db.conn.commit()

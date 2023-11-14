@@ -5,6 +5,7 @@ import logging
 
 from utils import *
 from utils.events import *
+from utils.db.mysql import MysqlHandler
 
 from strategies.simple_strat import SimpleStrat
 
@@ -23,7 +24,10 @@ kafka_config_file, sys_config_file = validate_cli_args(SCRIPT)
 SYS_CONFIG = get_system_config(sys_config_file)
 
 PRODUCE_TOPIC_TRADE_SIGNAL = SYS_CONFIG["kafka-topics"]["trade_signal"]
-CONSUME_TOPIC_MARKET_UPDATE = [SYS_CONFIG["kafka-topics"]["market_update"]]
+CONSUME_TOPIC_MARKET_UPDATE = SYS_CONFIG["kafka-topics"]["market_update"]
+CONSUME_TOPICS = [
+    CONSUME_TOPIC_MARKET_UPDATE
+]
 
 _, PRODUCER, CONSUMER, _ = set_producer_consumer(
     kafka_config_file,
@@ -47,29 +51,38 @@ GRACEFUL_SHUTDOWN = GracefulShutdown(consumer=CONSUMER)
 
 class StrategyHandler():
 
-    def __init__(self, strategy):
+    def __init__(self, config, producer, consumer, topic, strategy):
+        # Configurations
+        self.config = config
+        self.producer = producer
+        self.consumer = consumer
+        self.topic = topic
+
         # Strategy that is being implemented
         self.strategy = strategy
 
     def produce(self, signals: list[TradeSignal]):
 
-        for signals in signals:
+        for signal in signals:
 
-            signal_json = json.dumps(signals.__dict__).encode()
-            producer.produce(
+            with MysqlHandler('quantdome_db', SYS_CONFIG) as db:
+                db.insert_trade_signal(signal)
+
+            signal_json = json.dumps(signal.__dict__).encode('utf-8')
+            self.producer.produce(
                 topic=PRODUCE_TOPIC_TRADE_SIGNAL,
-                value=signal_json.encode('utf-8')
+                value=signal_json
             )
-            PRODUCER.flush()
+            self.producer.flush()
 
 
     def consume(self):
         # Consuming Market Updates
-        CONSUMER.subscribe(CONSUME_TOPIC_MARKET_UPDATE)
-        logging.info(f"Subscribed to topic(s): {', '.join(CONSUME_TOPIC_MARKET_UPDATE)}")
+        self.consumer.subscribe(self.topic)
+        logging.info(f"Subscribed to topic(s): {', '.join(self.topic)}")
         while True:
             # Consuming some Market Update
-            m_update_event = CONSUMER.poll(1)
+            m_update_event = self.consumer.poll(1)
 
             if m_update_event is not None:
                 if m_update_event.error():
@@ -77,7 +90,6 @@ class StrategyHandler():
                 else:
                     try:
                         # Add a little delay just to allow the logs on the previous micro-service to be displayed first
-                        time.sleep(.15)
 
                         log_event_received(m_update_event)
 
@@ -104,12 +116,18 @@ class StrategyHandler():
                             sys.exc_info(),
                         ) 
 
-                    CONSUMER.commit(asynchronous=False)  
+                    self.consumer.commit(asynchronous=False)  
 
-
+def main():
+    strat = SimpleStrat()
+    handler = StrategyHandler(
+        config=SYS_CONFIG,
+        producer=PRODUCER,
+        consumer=CONSUMER,
+        topic=CONSUME_TOPICS,
+        strategy=strat
+    )
+    handler.consume()
 
 if __name__ == "__main__":
-    strat = SimpleStrat()
-    test = StrategyHandler(strat)
-    test.consume()
-    #test.produce()    
+    main()

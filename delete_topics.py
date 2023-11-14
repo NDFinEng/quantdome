@@ -1,4 +1,4 @@
-# Create topics and ksqlDB Streams
+# Delete topics and ksqlDB Streams
 
 import sys
 import time
@@ -76,7 +76,7 @@ if __name__ == "__main__":
     replication_factor = int(SYS_CONFIG["kafka-topic-config"]["replication_factor"])
     for alias, topic in SYS_CONFIG["kafka-topics"].items():
         logging.info(
-            f"Creating topic {alias} as '{topic}' with {num_partitions} partition(s) and replication factor {replication_factor}..."
+            f"Deleting topic {alias} as '{topic}' with {num_partitions} partition(s) and replication factor {replication_factor}..."
         )
         try:
             partitions = get_topic_partitions(
@@ -84,31 +84,13 @@ if __name__ == "__main__":
                 topic,
                 default_partition_number=0,
             )
-            if partitions == 0:
-                result = (
-                    ADMIN_CLIENT.create_topics(
-                        [
-                            NewTopic(
-                                topic,
-                                num_partitions,
-                                replication_factor,
-                                config={
-                                    "cleanup.policy": "delete",
-                                    "delete.retention.ms": "2000",
-                                },
-                            ),
-                        ]
-                    )
-                    .get(topic)
-                    .result()
-                )
-            else:
-                logging.info("Topic already exists!")
-                continue
-        except Exception:
-            log_exception(
-                f"Error when creating topic!",
-                sys.exc_info(),
-            )
-        else:
-            logging.info("Done!")
+            # If topic exists, delete it
+            if partitions != 0:
+                logging.info(f"Topic {topic} already exists. Deleting...")
+                ADMIN_CLIENT.delete_topics([topic])
+                time.sleep(1)
+                logging.info(f"Topic {topic} deleted.")
+
+        except Exception as e:
+            log_exception(e, SCRIPT)
+            sys.exit(1)

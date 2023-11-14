@@ -24,15 +24,14 @@ kafka_config_file, sys_config_file = validate_cli_args(SCRIPT)
 SYS_CONFIG = get_system_config(sys_config_file)
 
 # Set producer / consumer objects
-TOPIC_MARKET_UPDATE = self.SYS_CONFIG["kafka-topics"]["market-update"]
-TOPIC_TRADE_SIGNAL = self.SYS_CONFIG["kafka-topics"]["trade-signal"]
-TOPIC_FILL_ORDER = self.SYS_CONFIG["kafka-topics"]["fill-order"]
+TOPIC_MARKET_UPDATE = SYS_CONFIG["kafka-topics"]["market_update"]
+TOPIC_TRADE_SIGNAL = SYS_CONFIG["kafka-topics"]["trade_signal"]
+TOPIC_TRADE_FILL = SYS_CONFIG["kafka-topics"]["trade_fill"]
 
-PRODUCE_TOPIC_ORDER = self.SYS_CONFIG["kafka-topics"]["trade-order"]
+PRODUCE_TOPIC_ORDER = SYS_CONFIG["kafka-topics"]["trade_order"]
 CONSUME_TOPICS = [
-    TOPIC_MARKET_UPDATE,
     TOPIC_TRADE_SIGNAL,
-    TOPIC_FILL_ORDER
+    TOPIC_TRADE_FILL
 ]
 
 # TODO: Create second consumer to listen to fill orders 
@@ -45,7 +44,7 @@ _, PRODUCER, CONSUMER, _ = set_producer_consumer(
     },
     consumer_extra_config={
         "group.id": f"""{SYS_CONFIG["kafka-consumer-group-id"]["microservice_portfolio"]}_{HOSTNAME}""",
-        "client.id": f"""{SYS_CONFIG["kafka-client-id"]["microservice_portflio"]}_{HOSTNAME}"""
+        "client.id": f"""{SYS_CONFIG["kafka-client-id"]["microservice_portfolio"]}_{HOSTNAME}"""
     }
 )
 
@@ -53,10 +52,15 @@ _, PRODUCER, CONSUMER, _ = set_producer_consumer(
 GRACEFUL_SHUTDOWN = GracefulShutdown(consumer=CONSUMER)
 
 # Set database handler
-DB = MysqlHandler("quantdome_db",sys_config_file)
 
 class PortfolioHandler():
-    def __init__(self):
+    def __init__(self, config, producer, consumer, topic):
+        # Configurations
+        self.config = config
+        self.producer = producer
+        self.consumer = consumer
+        self.topic = topic
+
         self.positions = {}
 
     def produce_order(self, trade_signal: TradeSignal):
@@ -70,13 +74,13 @@ class PortfolioHandler():
         )
 
         # Send order to kafka
-        market_update_json = json.dumps(market_update.__dict__)
-        PRODUCER.produce(
-            TOPIC_MARKET_UPDATE,
-            value=market_update_json.encode('utf-8')
+        trade_order_json = json.dumps(trade_order.__dict__)
+        self.producer.produce(
+            topic=PRODUCE_TOPIC_ORDER,
+            value=trade_order_json.encode('utf-8')
         )
 
-        PRODUCER.flush()
+        self.producer.flush()
 
     def update_fill(self, trade_fill: TradeFill):
         """Portfolio logic to update portfolio with trade fill"""
@@ -84,89 +88,80 @@ class PortfolioHandler():
         self.positions[trade_fill.symbol] = self.positions.get(trade_fill.symbol, 0) + trade_fill.quantity
         
         # Append to TradeFill Log
-        DB.insert_trade_fill(trade_fill)
+        self.update_portfolio(trade_fill)
 
-    def update_portfolio(self, MarketUpdate: MarketUpdate):
+    def update_portfolio(self, trade_fill: TradeFill):
         """Portfolio logic to update portfolio with market update"""
 
-        if MarketUpdate.symbol in self.positions:
+        if trade_fill.symbol in self.positions:
             portfolio_state = PortfolioState(
-                timestamp=MarketUpdate.timestamp,
-                symbol=MarketUpdate.symbol,
-                value=MarketUpdate.close,
-                quantity=self.positions[MarketUpdate.symbol],
+                timestamp=trade_fill.timestamp,
+                symbol=trade_fill.symbol,
+                quantity=self.positions[trade_fill.symbol],
                 portfolio=''
             )
 
             # Append to PortfolioState Log
-            DB.insert_portfolio_state(portfolio_state)
-            
+            with MysqlHandler('quantdome_db', SYS_CONFIG) as db:
+                db.insert_portfolio_state(portfolio_state)
 
     def consume(self):
 
-        CONSUMER.subscribe(CONSUME_TOPICS)
-        logging.info(f"Subscribed to topic(s): {','.join(self.CONSUME_TOPICS)}")
+        self.consumer.subscribe(CONSUME_TOPICS)
+        logging.info(f"Subscribed to topic(s): {' '.join(CONSUME_TOPICS)}")
         while True:
-            with self.GRACEFUL_SHUTDOWN as _:
+            # Pull event
+            event = self.consumer.poll(1)
 
-                # Pull event
-                event = self.CONSUMER.poll(1)
+            # Check for errors
+            if event is not None:
+                if event.error():
+                    logging.error(event.error())
+                else:
+                    log_event_received(event)
+                    topic = event.topic()
 
-                # Check for errors
-                if event is not None:
-                    if event.error():
-                        logging.error(event.error())
-                    else:
-                        # Small delay to allow logs on previous microservice to display first (can we remove?)
-                        time.sleep(0.15)
-                        log_event_received(event)
-                        topic = event.topic()
+                    if topic == TOPIC_TRADE_SIGNAL:
+                        try:
+                            event_details_json = event.value().decode('utf-8')
+                            event_details = json.loads(event_details_json)
+                            trade_signal = TradeSignal(**event_details)
 
-                        if topic == TOPIC_TRADE_SIGNAL:
-                            try:
-                                event_details_json = msg.value().decode('utf-8')
-                                event_details = json.loads(event_details_json)
-                                trade_signal = TradeSignal(**event_details)
+                            self.produce_order(trade_signal)
 
-                                seff.produce_order(trade_signal)
-                            except Exception:
-                                log_exception(
-                                    f'Error when processing event.value(): {event.value()}',
-                                    sys.exc_info()
-                                )
-                        elif topic == TOPIC_FILL_ORDER:
-                            try:
-                                event_details_json = msg.value().decode('utf-8')
-                                event_details = json.loads(event_details_json)
-                                trade_fill = TradeFill(**event_details)
+                        except Exception:
+                            log_exception(
+                                f'Error when processing event.value(): {event.value()}',
+                                sys.exc_info()
+                            )
+                    elif topic == TOPIC_TRADE_FILL:
+                        try:
+                            event_details_json = event.value().decode('utf-8')
+                            event_details = json.loads(event_details_json)
+                            trade_fill = TradeFill(**event_details)
 
-                                self.portfolio.update_fill(trade_fill)
-                            except Exception:
-                                log_exception(
-                                    f'Error when processing event.value(): {event.value()}',
-                                    sys.exc_info()
-                                )
-                        elif topic == TOPIC_MARKET_UPDATE:
-                            try:
-                                event_details_json = msg.value().decode('utf-8')
-                                event_details = json.loads(event_details_json)
-                                market_update = MarketUpdate(**event_details)
+                            self.update_fill(trade_fill)
+                        except Exception:
+                            log_exception(
+                                f'Error when processing event.value(): {event.value()}',
+                                sys.exc_info()
+                            )
 
-                                self.portfolio.update_portfolio(market_update)
-                            except Exception:
-                                log_exception(
-                                    f'Error when processing event.value(): {event.value()}',
-                                    sys.exc_info()
-                                )
 
-                    # Manual commit
-                    self.CONSUMER.commit(asynchronous=False)
+                # Manual commit
+                self.consumer.commit(asynchronous=False)
+
+def main():
+    # Call the actual portfolio handler
+    handler = PortfolioHandler(
+        config=SYS_CONFIG,
+        producer=PRODUCER,
+        consumer=CONSUMER,
+        topic=PRODUCE_TOPIC_ORDER
+    )
+    handler.consume()
             
 
 # Main
 if __name__ == "__main__":
-    # start consumer
-    # TODO: Current portfolio implementation requires direct access to data handler,
-    # this needs to be changed for kafka implementation
-    ph = PortfolioHandler(NaivePortfolio())
-    ph.receive_signal()
+    main()

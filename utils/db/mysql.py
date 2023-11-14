@@ -69,7 +69,7 @@ class MysqlHandler():
                 VALUES
                 (%s, %s, %s, %s, %s, %s, %s)""",
                 parameters=[
-                    data.timestamp,
+                    datetime.fromtimestamp(data.timestamp),
                     data.symbol,
                     data.high,
                     data.low,
@@ -89,16 +89,14 @@ class MysqlHandler():
             f"""INSERT INTO {self.sys_config["mysql-config"]["table_portfolio_state"]} (
                 timestamp,
                 symbol,
-                symbol_value,
                 quantity,
                 portfolio
             )
             VALUES
-            (%s, %s, %s, %s, %s)""",
+            (%s, %s, %s, %s)""",
             parameters=[
-                data.timestamp,
+                datetime.fromtimestamp(data.timestamp),
                 data.symbol,
-                data.value,
                 data.quantity,
                 data.portfolio,
             ],
@@ -117,7 +115,7 @@ class MysqlHandler():
             VALUES
             (%s, %s, %s, %s)""",
             parameters=[
-                data.timestamp,
+                datetime.fromtimestamp(data.timestamp),
                 data.symbol,
                 data.price,
                 data.quantity,

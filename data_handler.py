@@ -9,10 +9,11 @@ class DataHandler(object):
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, config, producer, topic):
+    def __init__(self, config, producer, consumer, topic):
         self.config = config
         self.producer = producer
         self.topic = topic
+        self.consumer = consumer
 
     @abstractmethod
     def produce(self):
@@ -24,11 +25,13 @@ class DataHandler(object):
 
 # Database Data Handler
 class DatabaseDataHandler(DataHandler):
-    def __init__(self, config, producer, topic, tickers):
-        super().__init__(config, producer, topic)
+    def __init__(self, config, producer, consumer, topic, tickers):
+        super().__init__(config, producer, consumer, topic)
         self.tickers = tickers
+        self.CONSUME_TOPIC_TRADE_SIGNAL = self.config["kafka-topics"]["trade_signal"]
     
     def produce(self):
+        self.consumer.subscribe([self.CONSUME_TOPIC_TRADE_SIGNAL])
 
         with MysqlHandler('quantdome_db', self.config) as db:
             for ticker in self.tickers:
@@ -38,7 +41,7 @@ class DatabaseDataHandler(DataHandler):
                 # Produce to Kafka
                 for row in historical_data:
                     market_update = MarketUpdate(
-                        timestamp=int(row[0].timestamp()),
+                        timestamp=row[0].timestamp()    ,
                         symbol=row[1],
                         high=float(row[2]),
                         low=float(row[3]),
@@ -50,7 +53,8 @@ class DatabaseDataHandler(DataHandler):
                     market_update_json = json.dumps(market_update.__dict__)
 
                     self.producer.produce(
-                        self.topic,
+                        topic=self.topic,
+                        key=str(market_update.timestamp).encode('utf-8'),
                         value=market_update_json.encode('utf-8')
                     )
 
@@ -95,6 +99,7 @@ class CSVDataHandler(DataHandler):
 
                 PRODUCER.produce(
                     PRODUCE_TOPIC_MARKET_UPDATE,
+                    key=market_update.timestamp.encode('utf-8'),
                     value=market_update_json.encode('utf-8')
                 )
                 PRODUCER.flush()

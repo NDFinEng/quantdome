@@ -8,3 +8,4 @@ dist/
 poetry.lock
 quantdome-db
 *csv
+pid

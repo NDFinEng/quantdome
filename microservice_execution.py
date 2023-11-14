@@ -37,7 +37,10 @@ kafka_config_file, sys_config_file = validate_cli_args(SCRIPT)
 SYS_CONFIG = get_system_config(sys_config_file)
 
 PRODUCE_TOPIC_TRADE_FILL = SYS_CONFIG["kafka-topics"]["trade_fill"]
-CONSUME_TOPIC_TRADE_ORDER = [SYS_CONFIG["kafka-topics"]["trade_order"]]
+CONSUME_TOPIC_TRADE_ORDER = SYS_CONFIG["kafka-topics"]["trade_order"]
+CONSUME_TOPICS = [
+    CONSUME_TOPIC_TRADE_ORDER
+]
 
 _, PRODUCER, CONSUMER, _ = set_producer_consumer(
     kafka_config_file,
@@ -69,22 +72,19 @@ class ExecutionHandler():
             symbol=order.symbol,
             price=order.price,
             quantity=order.quantity,
-            order_id=order.order_id,
-            portfolio=''
         )
 
         fill_json = json.dumps(trade_fill.__dict__)
-        PRODUCE.produce(
+        PRODUCER.produce(
             topic=PRODUCE_TOPIC_TRADE_FILL,
             value=fill_json.encode('utf-8')
         )
         PRODUCER.flush()
 
     def consume(self):
-        CONSUMER.subscribe(CONSUME_TOPIC_TRADE_ORDER)
-        logging.info(f"Subscribed to topic(s): {', '.join(CONSUME_TOPIC_TRADE_ORDER)}")
+        CONSUMER.subscribe(CONSUME_TOPICS)
+        logging.info(f"Subscribed to topic(s): {', '.join(CONSUME_TOPICS)}")
         while True:
-
             m_order_event = CONSUMER.poll(1)
 
             if m_order_event is not None:
@@ -92,10 +92,7 @@ class ExecutionHandler():
                     logging.error(m_update_event.error())
                 else:
                     try:
-                        time.sleep(.15)
-
                         log_event_received(m_order_event)
-
                         try:
                             trade_order = TradeOrder(**json.loads(m_order_event.value()))
 

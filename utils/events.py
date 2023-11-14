@@ -33,12 +33,10 @@ class TradeFill:
     symbol: str
     price: float
     quantity: int
-    exchange: str
 
 @dataclass
 class PortfolioState:
     timestamp: int
     symbol: str
-    value: float
     quantity: int
     portfolio: str
