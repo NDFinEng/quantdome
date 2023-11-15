@@ -2,5 +2,10 @@
 __pycache__/
 .venv/
 .env
+env/
+logs/
 dist/
 poetry.lock
+quantdome-db
+*csv
+pid

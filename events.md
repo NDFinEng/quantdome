@@ -61,3 +61,30 @@ FillEvent.commission
 ```
 
 Where again, a positive (+) quantity corresponds to a buy signal and a negative (-) quantity corresponds to a sell signal.
+
+
+Scratch space for defining schemas
+
+Market bar:
+- Timestamp (time)
+- Ticker (string)
+- High (float)
+- Low (float)
+- Open (float)
+- Close (float)
+- Volume (integer)
+
+Trade_Signals:
+- Timestamp (time)
+- Ticker (varchar(30))
+- Quantity (integer)
+- Price (float)
+- Simulation (varchar(255))
+
+Portfolio_State:
+- Timestamp (time)
+- Ticker (varchar(30))
+- Quantity
+- Ticker_Value
+- Total_Value
+- Portfolio (varchar(255))
